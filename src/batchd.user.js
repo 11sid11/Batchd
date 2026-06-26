@@ -33,6 +33,12 @@
     };
   }
 
+  // ---- Destructure dependencies from the Batchd namespace ---------------
+  // The build script (scripts/build.js) writes each module's exports as
+  // `Batchd.X = ...`, so we destructure them here. Without this, bare
+  // calls like `createStore(...)` would throw ReferenceError at runtime.
+  const { createStore, mountPanel, runCategory } = Batchd;
+
   // ---- Username discovery ----------------------------------------------------
   // We pull the username out of the URL so the run loop can navigate to the
   // correct tabs. /me/reposts also works (X resolves it server-side), so we
