@@ -1,0 +1,17 @@
+{
+  "name": "batchd",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Tampermonkey userscript that bulk-deletes a user's own X.com reposts and likes.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "test:pacing": "node --test test/pacing.test.js",
+    "test:persist": "node --test test/persist.test.js",
+    "test:failures": "node --test test/failures.test.js",
+    "build": "node scripts/build.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

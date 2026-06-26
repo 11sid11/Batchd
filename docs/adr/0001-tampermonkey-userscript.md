@@ -1,0 +1,3 @@
+# Tampermonkey userscript, not Chrome extension or plain script
+
+We picked a single-file Tampermonkey userscript over a standalone Chrome extension (MV3) or a plain DevTools console script. Trade-off accepted: no background service worker (so the run dies if the tab is backgrounded or closed) in exchange for zero build step, zero manifest, zero store review, and trivial version control (one file). A plain script was rejected because it can't persist state across tab refreshes; a full extension was rejected because the background-execution benefit isn't worth the deployment surface for a personal-use tool that runs while the user keeps the tab focused.
