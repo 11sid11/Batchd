@@ -70,8 +70,9 @@ export function mountPanel({ store, runSequential, onReset, log = () => {} }) {
     setStatus('running');
     goBtn.disabled = true;
     try {
-      await runSequential({ signal: state.abortController.signal, onProgress: onRunProgress });
-      setStatus('done');
+      const result = await runSequential({ signal: state.abortController.signal, onProgress: onRunProgress });
+      if (result?.reason) appendLog(`${result.status}: ${result.reason}`);
+      setStatus(result?.status ?? 'done');
     } catch (err) {
       appendLog(`error: ${err.message}`);
       setStatus('error');
@@ -89,8 +90,14 @@ export function mountPanel({ store, runSequential, onReset, log = () => {} }) {
   function onRunProgress(p) {
     if (p.phase === 'scrolling') {
       // Throttle: only update status text every scroll
+      const detail = p.eligible == null
+        ? `${p.articles} posts, ${p.emptyStreak} empty`
+        : `${p.visible} visible, ${p.eligible} eligible, ${p.skippedThisRun} skipped, idle ${p.idleStreak}`;
       root.querySelector('[data-status]').textContent =
-        `scrolling (${p.articles} posts, ${p.emptyStreak} empty)`;
+        `scrolling (${detail})`;
+    } else if (p.phase === 'detecting') {
+      root.querySelector('[data-status]').textContent =
+        `detecting (${p.visible} visible, ${p.eligible} eligible, ${p.skippedThisRun} skipped, idle ${p.idleStreak})`;
     } else if (p.phase === 'acting') {
       appendLog(`#${p.index + 1} ${p.postId} → ${p.kind}`);
       renderStats(store.loadState().stats);

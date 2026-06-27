@@ -8,11 +8,13 @@
 //   - 'rate_limited' : X returned 429 or similar
 //   - 'captcha'      : captcha UI detected
 //   - 'unknown'      : click seemingly succeeded but button still there — X didn't honor it
+//   - 'stale'        : target node was detached/replaced before the click could settle
 
-export const FAILURE_KINDS = ['success', 'already_gone', 'network', 'rate_limited', 'captcha', 'unknown'];
+export const FAILURE_KINDS = ['success', 'already_gone', 'network', 'rate_limited', 'captcha', 'unknown', 'stale'];
 
 export function classify(outcome) {
   if (!outcome) return 'unknown';
+  if (outcome.stale) return 'stale';
   if (outcome.buttonFound === false) return 'already_gone';
   if (outcome.captchaDetected) return 'captcha';
   if (outcome.error) return 'network';

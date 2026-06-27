@@ -33,19 +33,19 @@ test('nextDelay result is an integer (rounded)', () => {
   }
 });
 
-test('shouldBatchPause is true exactly every batchSize actions', () => {
+test('shouldBatchPause is true exactly every batchSize completed actions', () => {
   const batch = 50;
-  assert.equal(shouldBatchPause(0, batch), false);   // 1st action, not yet
-  assert.equal(shouldBatchPause(48, batch), false);  // 49th action, not yet
-  assert.equal(shouldBatchPause(49, batch), true);   // 50th action -> pause
-  assert.equal(shouldBatchPause(50, batch), false);  // 51st action, new batch
-  assert.equal(shouldBatchPause(98, batch), false);  // 99th action
-  assert.equal(shouldBatchPause(99, batch), true);   // 100th action -> pause
+  assert.equal(shouldBatchPause(0, batch), false);   // no completed actions
+  assert.equal(shouldBatchPause(49, batch), false);  // 49 completed, not yet
+  assert.equal(shouldBatchPause(50, batch), true);   // 50 completed -> pause
+  assert.equal(shouldBatchPause(51, batch), false);  // 51 completed, new batch
+  assert.equal(shouldBatchPause(99, batch), false);  // 99 completed
+  assert.equal(shouldBatchPause(100, batch), true);  // 100 completed -> pause
 });
 
 test('shouldBatchPause respects custom batch size', () => {
-  assert.equal(shouldBatchPause(9, 10), true);
-  assert.equal(shouldBatchPause(10, 10), false);
+  assert.equal(shouldBatchPause(10, 10), true);
+  assert.equal(shouldBatchPause(11, 10), false);
 });
 
 test('batchPauseDuration returns the configured pause in ms', () => {

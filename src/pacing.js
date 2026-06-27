@@ -12,9 +12,10 @@ export function nextDelay(baseMs, jitterFraction, rng = Math.random) {
   return Math.round(low + rng() * (high - low));
 }
 
-export function shouldBatchPause(actionIndex, batchSize) {
+export function shouldBatchPause(completedActions, batchSize) {
   if (batchSize <= 0) return false;
-  return (actionIndex + 1) % batchSize === 0;
+  if (completedActions <= 0) return false;
+  return completedActions % batchSize === 0;
 }
 
 export function batchPauseDuration(configuredMs) {

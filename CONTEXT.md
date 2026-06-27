@@ -24,8 +24,8 @@ the user's own authored posts, replies, media, DMs, or account.
 | **Cursor** | The position in a Reposts or Likes timeline where the script is currently reading from. |
 | **Watchdog** | The mechanism that detects end-of-list by counting consecutive scroll attempts that return no new items. |
 | **Dry run** | A mode where the script walks the timeline and tallies without performing any undo actions. |
-| **Failure** | Any non-success outcome for a single undo action: network error, rate-limit, captcha, or item-already-gone. |
-| **Consecutive-failure threshold** | The number of failures in a row that triggers a hard abort of the run. |
+| **Failure** | Any non-success outcome for a single undo action: network error, rate-limit, captcha, stale DOM target, or item-already-gone. |
+| **Consecutive-failure threshold** | The legacy Reposts threshold that triggers a hard abort when repeated failures suggest a sustained outage. Likes do not use this threshold; they skip/document non-captcha failures and keep refilling the timeline. |
 | **Pacing parameters** | The set of tunables controlling how fast undo actions are performed: base delay, jitter, batch pause, failure backoff. |
 
 ## Configuration surface
@@ -53,7 +53,9 @@ The user can additionally toggle:
 ### Operational (captured here, no ADR)
 
 - **Sequential Reposts → Quote Reposts → Likes** — single linear cursor per category, no cross-tab state
-- **Skip-and-continue on failure, hard-abort at 5 consecutive failures** — one bad item doesn't kill the run, sustained outage does
+- **Likes skip-and-document non-captcha failures; captcha/user stop are hard stops** — one bad item doesn't kill the run, and failed likes are left retryable in a future session
+- **Likes use an ongoing refill loop** — detect one visible target, unlike it, re-query, scroll for more when no eligible visible targets remain, and finish only after the idle watchdog proves no more work is surfacing
+- **Reposts retain skip-and-continue with hard-abort at 5 consecutive failures** — one bad item doesn't kill the run, sustained outage does
 - **Hybrid watchdog at 20 empty scrolls** for end-of-list detection — graceful "X is hiding older items" signal for power users
 - **Typed "DELETE" confirmation + dry-run mode toggle** — friction-by-design at the point of no return
 - **Persist state on every Nth action, no explicit close-tab handlers** — crash-safe without `beforeunload` ceremony

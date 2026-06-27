@@ -28,6 +28,10 @@ test('classify maps button-still-there-after-click (X did not honor the request)
   assert.equal(classify({ buttonFound: true, responseOk: true, buttonStillThere: true }), 'unknown');
 });
 
+test('classify maps stale DOM targets to stale', () => {
+  assert.equal(classify({ stale: true }), 'stale');
+});
+
 test('classify is exhaustive — every kind in FAILURE_KINDS has a classifier path', () => {
   // All known outcomes should map to a known kind, never undefined
   const samples = [
@@ -37,6 +41,7 @@ test('classify is exhaustive — every kind in FAILURE_KINDS has a classifier pa
     { buttonFound: true, status: 429 },
     { buttonFound: true, captchaDetected: true },
     { buttonFound: true, responseOk: true, buttonStillThere: true },
+    { stale: true },
     { buttonFound: true, status: 500 },
     {},
   ];

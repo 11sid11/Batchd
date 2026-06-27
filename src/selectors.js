@@ -193,10 +193,11 @@ export async function scrollUntilExhausted({ onProgress, signal } = {}) {
     if (signal?.aborted) return { reason: 'aborted', totalScrolled };
     if (isCaptchaPresent()) return { reason: 'captcha', totalScrolled };
 
-    window.scrollTo(0, document.body.scrollHeight);
-    await sleep(SCROLL_PAUSE_MS);
+    const result = await scrollForMore({ signal });
+    if (result.reason === 'aborted') return { reason: 'aborted', totalScrolled };
+    if (result.reason === 'captcha') return { reason: 'captcha', totalScrolled };
 
-    const current = document.querySelectorAll('article[data-testid="tweet"]').length;
+    const current = result.articles;
     if (current > lastCount) {
       lastCount = current;
       emptyStreak = 0;
@@ -210,8 +211,28 @@ export async function scrollUntilExhausted({ onProgress, signal } = {}) {
   return { reason: 'exhausted', totalScrolled, finalCount: lastCount };
 }
 
+export async function scrollForMore({ signal } = {}) {
+  if (signal?.aborted) return { reason: 'aborted', articles: 0 };
+  if (isCaptchaPresent()) return { reason: 'captcha', articles: 0 };
+
+  const before = document.querySelectorAll('article[data-testid="tweet"]').length;
+  window.scrollTo(0, document.body.scrollHeight);
+  await sleep(SCROLL_PAUSE_MS);
+  const after = document.querySelectorAll('article[data-testid="tweet"]').length;
+
+  return {
+    reason: 'scrolled',
+    articles: after,
+    changed: after !== before,
+  };
+}
+
 export async function clickUndo(target, { signal } = {}) {
   // target: { undoButton, needsMenu, postId }
+  if (target.undoButton?.isConnected === false) {
+    return { outcome: { stale: true } };
+  }
+
   if (target.needsMenu) {
     target.undoButton.click();
     await sleep(300);   // wait for menu to open
