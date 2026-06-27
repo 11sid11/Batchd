@@ -1,6 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { clickUndo, findEngagedPosts } from '../src/selectors.js';
+import { clickUndo, findEngagedPosts, tabUrl } from '../src/selectors.js';
+
+test('tabUrl only supports likes', () => {
+  assert.equal(tabUrl('me', 'likes'), 'https://x.com/me/likes');
+  assert.throws(() => tabUrl('me', 'unsupported'), /Unknown category: unsupported/);
+});
 
 test('clickUndo treats removed unlike signal as a successful flip', async () => {
   const originalDocument = globalThis.document;
@@ -34,7 +39,6 @@ test('clickUndo treats removed unlike signal as a successful flip', async () => 
 
     const result = await clickUndo({
       undoButton,
-      needsMenu: false,
       postId: '123',
     });
 
@@ -60,7 +64,6 @@ test('clickUndo treats a missing refreshed article as already gone', async () =>
 
     const result = await clickUndo({
       undoButton,
-      needsMenu: false,
       postId: '456',
     });
 

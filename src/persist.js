@@ -8,11 +8,9 @@ export const STATE_KEY = 'batchd_state';
 
 export function defaultState() {
   return {
-    cursor: { reposts: null, quoteReposts: null, likes: null },
+    cursor: { likes: null },
     processed: [],          // array (not Set) so JSON round-trips cleanly
     config: {
-      deleteReposts: true,
-      deleteQuoteReposts: true,
       deleteLikes: true,
       dryRun: false,
       pacing: {

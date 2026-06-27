@@ -24,7 +24,3 @@ export function classify(outcome) {
   if (outcome.responseOk && outcome.buttonStillThere === true) return 'unknown';
   return 'unknown';
 }
-
-export function shouldAbort(consecutiveFailures, threshold) {
-  return consecutiveFailures >= threshold;
-}

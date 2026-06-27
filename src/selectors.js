@@ -1,29 +1,10 @@
 // Selectors — the only module that touches the X.com DOM.
-//
-// Selectors come from prototype/findings/SELECTORS.md. They are stable across
-// X's React front-end (2022–present) but X can change them at any time.
-// Verification snippet for a logged-in session is in that doc.
-//
-// This module is browser-only. Tests for it would require JSDOM + a fixture
-// page; given the cost we instead verify the selectors manually on first run.
 
-// Profile-tab URLs for the categories Batchd handles.
-// Reposts tab is /me/reposts (formerly /me/retweets, redirects).
 const TAB_PATHS = {
-  reposts: '/reposts',
-  quoteReposts: '/reposts',   // X mixes native reposts and quote reposts in the same tab
   likes: '/likes',
 };
 
-// The undo-button test ID for each category.
-// Reposts: must open the repost-confirm menu first, then click unretweet.
-const UNDO_BUTTON = {
-  reposts: { primary: 'retweet', menuItem: 'unretweet' },
-  quoteReposts: { primary: 'retweet', menuItem: 'unretweet' },
-  likes: 'unlike',
-};
-
-// Stable SVG-path signatures for each engagement icon. X rotates the
+// Stable SVG-path signatures for engagement icons. X rotates the
 // `data-testid` attributes between front-end releases but the actual SVG
 // icon paths are more durable (they only change on a redesign). We use
 // these as fallback selectors when the testid no longer matches.
@@ -31,10 +12,6 @@ const ICON_PATH = {
   // Filled heart (LIKE present → UNDO click) — the one the user confirmed
   // for the likes tab. Path starts "M20.884 13.19...".
   likedHeart: 'M20.884 13.19',
-  // Repost glyph (two arrows in a square) — used as the undo anchor on
-  // reposts. We still prefer the testid there because the dropdown flow
-  // relies on `[data-testid="retweet"]` opening the menu.
-  repostGlyph: 'M4.5 3.88l4.432 4.14-1.364 1.46L5.5 7.55V16c0 1.1.896 2 2 2H13v2H7.5c-2.209 0-4-1.79-4-4V7.55L1.432 9.48.068 8.02 4.5 3.88z',
 };
 
 // Cap on scroll attempts with no new items before the watchdog declares
@@ -55,46 +32,17 @@ export function tabUrl(username, category) {
 }
 
 export function findEngagedPosts(category) {
+  if (category !== 'likes') throw new Error(`Unknown category: ${category}`);
+
   const results = [];
   const seen = new Set();
 
-  if (category === 'likes') {
-    // Strategy: scan for unlike controls anywhere on the page and walk
-    // each one up to the enclosing post. This avoids relying on a
-    // particular wrapper convention (`<article data-testid="tweet">` vs
-    // `<div id="id__<random>">` vs whatever X ships next).
-    //
-    // We try three signals, in order of stability:
-    //   1. `aria-label="Liked"` on a button — X always sets this on the
-    //      active like button; very stable across releases.
-    //   2. The heart SVG path — the actual icon geometry; survives testid
-    //      renames.
-    //   3. `[data-testid="unlike"]` — the documented canonical selector;
-    //      may have been renamed by the current build.
-    // Each signal that hits returns the wrapping button; we then walk up
-    // to the post container to capture the post ID.
-    const candidates = collectUnlikeButtons();
-    for (const btn of candidates) {
-      const { postId, container } = findPostFromButton(btn);
-      if (!postId || seen.has(postId)) continue;
-      seen.add(postId);
-      results.push({ article: container, postId, undoButton: btn, needsMenu: false });
-    }
-    return results;
-  }
-
-  // Reposts + Quote Reposts: keep using the article-scoped testid selector.
-  // The two-click flow (open menu, click unretweet) is stable on the
-  // data-testid attribute, and `data-testid="retweet"` reliably opens the
-  // dropdown that contains `data-testid="unretweet"`.
-  const articles = Array.from(document.querySelectorAll('article[data-testid="tweet"]'));
-  for (const article of articles) {
-    const id = extractPostId(article);
-    if (!id || seen.has(id)) continue;
-    seen.add(id);
-
-    const btn = article.querySelector('[data-testid="retweet"]');
-    if (btn) results.push({ article, postId: id, undoButton: btn, needsMenu: true });
+  const candidates = collectUnlikeButtons();
+  for (const btn of candidates) {
+    const { postId, container } = findPostFromButton(btn);
+    if (!postId || seen.has(postId)) continue;
+    seen.add(postId);
+    results.push({ article: container, postId, undoButton: btn });
   }
   return results;
 }
@@ -180,37 +128,6 @@ export function isCaptchaPresent() {
   return false;
 }
 
-export async function scrollUntilExhausted({ onProgress, signal } = {}) {
-  // Scroll the page in fixed steps, giving X time to lazy-load each batch.
-  // Returns when:
-  //   - EMPTY_SCROLL_WATCHDOG consecutive scrolls produced no new articles, OR
-  //   - signal.aborted is true.
-  let lastCount = -1;
-  let emptyStreak = 0;
-  let totalScrolled = 0;
-
-  while (emptyStreak < EMPTY_SCROLL_WATCHDOG) {
-    if (signal?.aborted) return { reason: 'aborted', totalScrolled };
-    if (isCaptchaPresent()) return { reason: 'captcha', totalScrolled };
-
-    const result = await scrollForMore({ signal });
-    if (result.reason === 'aborted') return { reason: 'aborted', totalScrolled };
-    if (result.reason === 'captcha') return { reason: 'captcha', totalScrolled };
-
-    const current = result.articles;
-    if (current > lastCount) {
-      lastCount = current;
-      emptyStreak = 0;
-    } else {
-      emptyStreak++;
-    }
-    totalScrolled++;
-    onProgress?.({ articles: current, emptyStreak, totalScrolled });
-  }
-
-  return { reason: 'exhausted', totalScrolled, finalCount: lastCount };
-}
-
 export async function scrollForMore({ signal } = {}) {
   if (signal?.aborted) return { reason: 'aborted', articles: 0 };
   if (isCaptchaPresent()) return { reason: 'captcha', articles: 0 };
@@ -228,21 +145,11 @@ export async function scrollForMore({ signal } = {}) {
 }
 
 export async function clickUndo(target, { signal } = {}) {
-  // target: { undoButton, needsMenu, postId }
   if (target.undoButton?.isConnected === false) {
     return { outcome: { stale: true } };
   }
 
-  if (target.needsMenu) {
-    target.undoButton.click();
-    await sleep(300);   // wait for menu to open
-    if (signal?.aborted) return { outcome: { buttonFound: false } };
-    const menuItem = document.querySelector('[data-testid="unretweet"]');
-    if (!menuItem) return { outcome: { buttonFound: false } };   // already gone
-    menuItem.click();
-  } else {
-    target.undoButton.click();
-  }
+  target.undoButton.click();
 
   // Wait for the button to flip (or disappear, or for us to time out).
   const flipped = await waitForFlip(target, signal);

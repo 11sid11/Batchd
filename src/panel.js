@@ -19,7 +19,7 @@ export function mountPanel({ store, runSequential, onReset, log = () => {} }) {
   };
 
   // Wire up toggles -> store
-  for (const key of ['deleteReposts', 'deleteQuoteReposts', 'deleteLikes', 'dryRun']) {
+  for (const key of ['deleteLikes', 'dryRun']) {
     const el = root.querySelector(`[data-toggle="${key}"]`);
     const cfg = store.loadState().config[key];
     if (el) el.checked = cfg;
@@ -135,8 +135,6 @@ function template() {
     <h1>Batchd <button class="secondary" data-action="reset" title="Reset all state" style="padding:2px 8px;font-size:11px;">reset</button></h1>
     <div class="status" data-status>idle</div>
     <div class="toggles">
-      <label class="toggle"><input type="checkbox" data-toggle="deleteReposts"> Reposts</label>
-      <label class="toggle"><input type="checkbox" data-toggle="deleteQuoteReposts"> Quote Reposts</label>
       <label class="toggle"><input type="checkbox" data-toggle="deleteLikes"> Likes</label>
       <label class="toggle"><input type="checkbox" data-toggle="dryRun"> Dry run (preview only)</label>
     </div>

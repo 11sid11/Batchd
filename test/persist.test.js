@@ -62,25 +62,20 @@ test('processed set survives a save/load round trip', () => {
 
 test('cursor is null by default for each category', () => {
   const store = createStore(memoryStorage());
-  assert.equal(store.loadCursor('reposts'), null);
-  assert.equal(store.loadCursor('quoteReposts'), null);
   assert.equal(store.loadCursor('likes'), null);
 });
 
 test('saveCursor persists per category and loadCursor returns the right value', () => {
   const store = createStore(memoryStorage());
-  store.saveCursor('reposts', '111');
   store.saveCursor('likes', '222');
-  assert.equal(store.loadCursor('reposts'), '111');
   assert.equal(store.loadCursor('likes'), '222');
-  assert.equal(store.loadCursor('quoteReposts'), null);   // not touched
 });
 
 test('saveCursor overwrites prior cursor for the same category', () => {
   const store = createStore(memoryStorage());
-  store.saveCursor('reposts', '111');
-  store.saveCursor('reposts', '222');
-  assert.equal(store.loadCursor('reposts'), '222');
+  store.saveCursor('likes', '111');
+  store.saveCursor('likes', '222');
+  assert.equal(store.loadCursor('likes'), '222');
 });
 
 test('bumpStat increments a stat counter by 1 by default', () => {
@@ -113,8 +108,6 @@ test('updateConfig merges partial config without dropping existing keys', () => 
   store.updateConfig({ deleteLikes: false });
   const state = store.loadState();
   assert.equal(state.config.deleteLikes, false);
-  assert.equal(state.config.deleteReposts, true);   // preserved
-  assert.equal(state.config.deleteQuoteReposts, true); // preserved
   assert.ok(state.config.pacing);                    // preserved
 });
 

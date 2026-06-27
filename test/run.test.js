@@ -48,7 +48,7 @@ function withLocation(path, fn) {
 }
 
 function target(postId) {
-  return { postId, undoButton: {}, needsMenu: false };
+  return { postId, undoButton: {} };
 }
 
 test('likes keep scrolling and process targets that appear after an empty pass', async () => {

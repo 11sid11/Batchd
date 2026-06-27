@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { classify, FAILURE_KINDS, shouldAbort } from '../src/failures.js';
+import { classify, FAILURE_KINDS } from '../src/failures.js';
 
 test('classify maps a clean click outcome to success', () => {
   assert.equal(classify({ buttonFound: true, responseOk: true, buttonStillThere: false }), 'success');
@@ -49,21 +49,4 @@ test('classify is exhaustive — every kind in FAILURE_KINDS has a classifier pa
     const kind = classify(s);
     assert.ok(FAILURE_KINDS.includes(kind), `classifier returned unknown kind: ${kind} for ${JSON.stringify(s)}`);
   }
-});
-
-test('shouldAbort is false below the threshold', () => {
-  assert.equal(shouldAbort(0, 5), false);
-  assert.equal(shouldAbort(4, 5), false);
-});
-
-test('shouldAbort is true at or above the threshold', () => {
-  assert.equal(shouldAbort(5, 5), true);
-  assert.equal(shouldAbort(6, 5), true);
-});
-
-test('shouldAbort treats already_gone as a reset, not a step toward abort', () => {
-  // Helper: after an already_gone, the counter is reset to 0, so shouldAbort is false
-  let counter = 3;
-  counter = 0;   // reset
-  assert.equal(shouldAbort(counter, 5), false);
 });
