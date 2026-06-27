@@ -55,6 +55,7 @@ The user can additionally toggle:
 - **Sequential Reposts → Quote Reposts → Likes** — single linear cursor per category, no cross-tab state
 - **Likes skip-and-document non-captcha failures; captcha/user stop are hard stops** — one bad item doesn't kill the run, and failed likes are left retryable in a future session
 - **Likes use an ongoing refill loop** — detect one visible target, unlike it, re-query, scroll for more when no eligible visible targets remain, and finish only after the idle watchdog proves no more work is surfacing
+- **Likes cleanup is best-effort against X's rendered timeline** — X may leave a small number of liked posts hidden, stalled, tombstoned, or rendered without a detectable unlike control; those can require a refresh/rerun or manual cleanup
 - **Reposts retain skip-and-continue with hard-abort at 5 consecutive failures** — one bad item doesn't kill the run, sustained outage does
 - **Hybrid watchdog at 20 empty scrolls** for end-of-list detection — graceful "X is hiding older items" signal for power users
 - **Typed "DELETE" confirmation + dry-run mode toggle** — friction-by-design at the point of no return
