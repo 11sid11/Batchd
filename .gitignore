@@ -1,4 +1,5 @@
 node_modules/
 dist/
+handoff/
 *.log
 .DS_Store

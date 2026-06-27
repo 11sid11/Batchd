@@ -28,7 +28,9 @@ export async function runCategory(category, { store, username, signal, onProgres
   let consecutiveFailures = 0;
   const maxConsecutive = 5;
 
-  // First scroll: until exhausted / captcha / aborted
+  // First scroll: until exhausted / captcha / aborted. This loads as many
+  // articles into the DOM as X's lazy-loader is willing to surface before
+  // it gives up.
   const scrollResult = await scrollUntilExhausted({
     onProgress: (p) => onProgress?.({ phase: 'scrolling', ...p }),
     signal,
@@ -42,66 +44,73 @@ export async function runCategory(category, { store, username, signal, onProgres
     return { status: 'aborted' };
   }
 
-  // Then process each engaged post we found
-  const targets = findEngagedPosts(category);
-  log(`run: found ${targets.length} engaged posts`);
-
-  for (let i = 0; i < targets.length; i++) {
+  // Process iteratively. After each pass, the DOM has changed — articles we
+  // unliked have been removed, articles below them have shifted up, and X
+  // may have lazy-loaded more posts into the now-empty space. Re-query
+  // `findEngagedPosts` each iteration so newly-surfaced posts get processed
+  // too. Stop when an iteration finds no new unprocessed posts.
+  const MAX_DETECTION_ITERATIONS = 20;
+  for (let detectionRound = 0; detectionRound < MAX_DETECTION_ITERATIONS; detectionRound++) {
     if (signal?.aborted) return { status: 'aborted' };
-    const target = targets[i];
 
-    // Skip if we already processed this post in a prior session
-    if (store.processedHas(target.postId)) {
-      store.bumpStat('skipped');
-      continue;
-    }
+    const allTargets = findEngagedPosts(category);
+    const targets = allTargets.filter((t) => !store.processedHas(t.postId));
+    log(`run: round ${detectionRound} — ${allTargets.length} in DOM, ${targets.length} unprocessed`);
 
-    // Pace: sleep baseMs ± jitter before the action
-    const delay = nextDelay(cfg.pacing.baseMs, cfg.pacing.jitter);
-    await sleep(delay);
+    if (targets.length === 0) break;
 
-    let clickResult;
-    if (cfg.dryRun) {
-      clickResult = { outcome: { buttonFound: true, responseOk: true, buttonStillThere: true } };
-      log(`run: [dry] would click ${category} on ${target.postId}`);
-    } else {
-      try {
-        clickResult = await clickUndo(target, { signal });
-      } catch (err) {
-        clickResult = { outcome: { buttonFound: true, error: err } };
+    for (let i = 0; i < targets.length; i++) {
+      if (signal?.aborted) return { status: 'aborted' };
+      const target = targets[i];
+
+      // Pace: sleep baseMs ± jitter before the action
+      const delay = nextDelay(cfg.pacing.baseMs, cfg.pacing.jitter);
+      await sleep(delay);
+
+      let clickResult;
+      if (cfg.dryRun) {
+        clickResult = { outcome: { buttonFound: true, responseOk: true, buttonStillThere: true } };
+        log(`run: [dry] would click ${category} on ${target.postId}`);
+      } else {
+        try {
+          clickResult = await clickUndo(target, { signal });
+        } catch (err) {
+          clickResult = { outcome: { buttonFound: true, error: err } };
+        }
       }
-    }
 
-    const kind = classify(clickResult.outcome);
-    onProgress?.({ phase: 'acting', index: i, postId: target.postId, kind });
+      const kind = classify(clickResult.outcome);
+      onProgress?.({ phase: 'acting', index: i, postId: target.postId, kind });
 
-    if (kind === 'success' || kind === 'already_gone') {
-      store.processedAdd(target.postId);
-      store.bumpStat(kind === 'success' ? 'success' : 'skipped');
-      store.saveCursor(category, target.postId);
-      consecutiveFailures = 0;
-      processedThisRun++;
-    } else {
-      store.bumpStat('failure');
-      store.recordFailure(target.postId, kind);
-      consecutiveFailures++;
-      if (shouldAbort(consecutiveFailures, maxConsecutive)) {
-        log(`run: abort — ${consecutiveFailures} consecutive failures`);
-        return { status: 'aborted', reason: 'consecutive_failures', consecutiveFailures };
+      if (kind === 'success' || kind === 'already_gone') {
+        store.processedAdd(target.postId);
+        store.bumpStat(kind === 'success' ? 'success' : 'skipped');
+        store.saveCursor(category, target.postId);
+        consecutiveFailures = 0;
+        processedThisRun++;
+      } else {
+        store.bumpStat('failure');
+        store.recordFailure(target.postId, kind);
+        consecutiveFailures++;
+        if (shouldAbort(consecutiveFailures, maxConsecutive)) {
+          log(`run: abort — ${consecutiveFailures} consecutive failures`);
+          return { status: 'aborted', reason: 'consecutive_failures', consecutiveFailures };
+        }
+        const backoff = backoffMs(consecutiveFailures, cfg.pacing.backoffBaseMs, cfg.pacing.backoffMaxMs);
+        log(`run: ${kind} on ${target.postId} — backing off ${backoff}ms`);
+        await sleep(backoff);
       }
-      const backoff = backoffMs(consecutiveFailures, cfg.pacing.backoffBaseMs, cfg.pacing.backoffMaxMs);
-      log(`run: ${kind} on ${target.postId} — backing off ${backoff}ms`);
-      await sleep(backoff);
-    }
 
-    // Batch pause — every N actions, take a longer rest so X's rate-limit
-    // window resets.
-    if (shouldBatchPause(i, cfg.pacing.batchSize)) {
-      log(`run: batch pause — ${cfg.pacing.batchPauseMs}ms rest`);
-      await sleep(cfg.pacing.batchPauseMs);
-    }
+      // Batch pause — every N actions, take a longer rest so X's rate-limit
+      // window resets. Use the running `processedThisRun` (across rounds)
+      // so the cadence is consistent.
+      if (shouldBatchPause(processedThisRun, cfg.pacing.batchSize)) {
+        log(`run: batch pause — ${cfg.pacing.batchPauseMs}ms rest`);
+        await sleep(cfg.pacing.batchPauseMs);
+      }
 
-    store.touchLastAction();
+      store.touchLastAction();
+    }
   }
 
   store.flush();
