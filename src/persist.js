@@ -28,6 +28,12 @@ export const PACING_PRESETS = {
   },
 };
 
+const STAT_KEYS = ['success', 'failure', 'skipped', 'consecutiveFailures'];
+
+function emptyStatBucket() {
+  return { success: 0, failure: 0, skipped: 0, consecutiveFailures: 0 };
+}
+
 export function defaultState() {
   return {
     cursor: { likes: null, replies: null },
@@ -41,11 +47,12 @@ export function defaultState() {
         replies: { ...PACING_PRESETS.replies },
       },
     },
+    // Per-category run counters so the panel can show likes stats when
+    // the user is running likes and replies stats when running replies.
+    // startedAt and lastActionAt are global (most-recent-run timeline).
     stats: {
-      success: 0,
-      failure: 0,
-      skipped: 0,
-      consecutiveFailures: 0,
+      likes: emptyStatBucket(),
+      replies: emptyStatBucket(),
       startedAt: 0,
       lastActionAt: 0,
     },
@@ -64,9 +71,10 @@ export function pacingFor(category, cfg) {
 }
 
 // Migrate a state object loaded from storage. Handles the v0.1.0 shape
-// (flat `config.pacing = { baseMs, jitter, ... }` for likes only) by
-// re-parenting the keys under `config.pacing.likes`. New keys are filled
-// in from the current defaults. Idempotent.
+// (flat `config.pacing = { baseMs, jitter, ... }` for likes only) and
+// the v0.2.0 flat `stats = { success, failure, skipped, ... }` shape.
+// Both are re-parented under their category. New keys are filled in from
+// the current defaults. Idempotent.
 function migrate(raw) {
   if (!raw || typeof raw !== 'object') return defaultState();
   const next = defaultState();
@@ -89,7 +97,6 @@ function migrate(raw) {
     // Old shape: config.pacing = { baseMs, jitter, ... } for likes only.
     // New shape: config.pacing = { likes: {...}, replies: {...} }.
     if (c.pacing && typeof c.pacing === 'object') {
-      // If new shape already present, take it as-is.
       if (c.pacing.likes || c.pacing.replies) {
         next.config.pacing = {
           likes: { ...PACING_PRESETS.likes, ...(c.pacing.likes || {}) },
@@ -105,10 +112,34 @@ function migrate(raw) {
     }
   }
 
-  // Stats and failures — best-effort, defaults to fresh.
+  // Stats — v0.1.0 was flat (success/failure/skipped at top level).
+  // v0.2.0+ is per-category. Re-parent flat counters into stats.likes
+  // since the pre-releases only had likes runs.
   if (raw.stats && typeof raw.stats === 'object') {
-    next.stats = { ...next.stats, ...raw.stats };
+    const s = raw.stats;
+    const hasFlat =
+      typeof s.success === 'number' ||
+      typeof s.failure === 'number' ||
+      typeof s.skipped === 'number' ||
+      typeof s.consecutiveFailures === 'number';
+    if (hasFlat) {
+      next.stats.likes = {
+        success: s.success ?? 0,
+        failure: s.failure ?? 0,
+        skipped: s.skipped ?? 0,
+        consecutiveFailures: s.consecutiveFailures ?? 0,
+      };
+      if (typeof s.startedAt === 'number') next.stats.startedAt = s.startedAt;
+      if (typeof s.lastActionAt === 'number') next.stats.lastActionAt = s.lastActionAt;
+    } else if (s.likes || s.replies) {
+      if (s.likes) next.stats.likes = { ...next.stats.likes, ...s.likes };
+      if (s.replies) next.stats.replies = { ...next.stats.replies, ...s.replies };
+      if (typeof s.startedAt === 'number') next.stats.startedAt = s.startedAt;
+      if (typeof s.lastActionAt === 'number') next.stats.lastActionAt = s.lastActionAt;
+    }
   }
+
+  // Failures — best-effort, defaults to fresh.
   if (raw.failures && typeof raw.failures === 'object') {
     next.failures = { ...raw.failures };
   }
@@ -116,13 +147,17 @@ function migrate(raw) {
   return next;
 }
 
+function ensureStatBucket(cache, category) {
+  if (!cache.stats[category] || typeof cache.stats[category] !== 'object') {
+    cache.stats[category] = emptyStatBucket();
+  }
+  return cache.stats[category];
+}
+
 export function createStore(storage, options = {}) {
-  const saveEvery = options.saveEvery ?? 1;   // persist every N mutations
+  const saveEvery = options.saveEvery ?? 1;
   const log = options.log ?? (() => {});
 
-  // Load once at construction. All mutations work against this in-memory
-  // copy. We persist every `saveEvery` mutations so a long run doesn't
-  // JSON.stringify the entire state on every single click.
   function readFromStorage() {
     const raw = storage.get(STATE_KEY);
     if (raw == null) return defaultState();
@@ -139,9 +174,7 @@ export function createStore(storage, options = {}) {
 
   function maybeFlush() {
     opsSinceFlush++;
-    if (opsSinceFlush >= saveEvery) {
-      flush();
-    }
+    if (opsSinceFlush >= saveEvery) flush();
   }
 
   function flush() {
@@ -152,7 +185,6 @@ export function createStore(storage, options = {}) {
 
   return {
     loadState() {
-      // Returns a copy so external callers can't mutate the cache by reference
       return JSON.parse(JSON.stringify(cache));
     },
 
@@ -166,7 +198,7 @@ export function createStore(storage, options = {}) {
       flush();
     },
 
-    flush,   // exposed for the run loop to force a save at end-of-session
+    flush,
 
     processedHas(postId) {
       return cache.processed.includes(postId);
@@ -192,8 +224,15 @@ export function createStore(storage, options = {}) {
       maybeFlush();
     },
 
-    bumpStat(name, n = 1) {
-      cache.stats[name] = (cache.stats[name] ?? 0) + n;
+    // Increment a per-category counter (e.g. 'success', 'failure',
+    // 'skipped', 'consecutiveFailures'). Global stats (startedAt,
+    // lastActionAt) are managed by their own methods.
+    bumpStat(category, name, n = 1) {
+      if (!STAT_KEYS.includes(name)) {
+        throw new Error(`bumpStat: unknown per-category stat name: ${name}`);
+      }
+      const bucket = ensureStatBucket(cache, category);
+      bucket[name] = (bucket[name] ?? 0) + n;
       maybeFlush();
     },
 
@@ -207,8 +246,11 @@ export function createStore(storage, options = {}) {
       maybeFlush();
     },
 
-    setStat(name, value) {
-      cache.stats[name] = value;
+    // Set an arbitrary per-category stat. Used by tests; not called
+    // from the run loop (which only bumps standard counters).
+    setStat(category, name, value) {
+      const bucket = ensureStatBucket(cache, category);
+      bucket[name] = value;
       maybeFlush();
     },
 

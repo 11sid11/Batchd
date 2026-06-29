@@ -78,20 +78,20 @@ test('saveCursor overwrites prior cursor for the same category', () => {
   assert.equal(store.loadCursor('likes'), '222');
 });
 
-test('bumpStat increments a stat counter by 1 by default', () => {
+test('bumpStat increments a per-category stat counter by 1 by default', () => {
   const store = createStore(memoryStorage());
-  store.bumpStat('success');
-  store.bumpStat('success');
-  store.bumpStat('failure');
+  store.bumpStat('likes', 'success');
+  store.bumpStat('likes', 'success');
+  store.bumpStat('likes', 'failure');
   const state = store.loadState();
-  assert.equal(state.stats.success, 2);
-  assert.equal(state.stats.failure, 1);
+  assert.equal(state.stats.likes.success, 2);
+  assert.equal(state.stats.likes.failure, 1);
 });
 
 test('bumpStat accepts a custom increment', () => {
   const store = createStore(memoryStorage());
-  store.bumpStat('success', 5);
-  assert.equal(store.loadState().stats.success, 5);
+  store.bumpStat('replies', 'success', 5);
+  assert.equal(store.loadState().stats.replies.success, 5);
 });
 
 test('recordFailure persists classification by postId', () => {
@@ -115,7 +115,7 @@ test('reset clears all state back to defaults', () => {
   const storage = memoryStorage();
   const s1 = createStore(storage);
   s1.processedAdd('111');
-  s1.bumpStat('success', 10);
+  s1.bumpStat('likes', 'success', 10);
   s1.recordFailure('222', 'captcha');
   s1.reset();
   const s2 = createStore(storage);
@@ -169,10 +169,10 @@ test('flush() forces an immediate write', () => {
   assert.equal(fresh.processedHas('1'), true);
 });
 
-test('setStat writes an arbitrary stat value', () => {
+test('setStat writes an arbitrary per-category stat value', () => {
   const store = createStore(memoryStorage());
-  store.setStat('foo', 42);
-  assert.equal(store.loadState().stats.foo, 42);
+  store.setStat('likes', 'foo', 42);
+  assert.equal(store.loadState().stats.likes.foo, 42);
 });
 
 test('markRunStarted sets startedAt only the first time it is called', async () => {
@@ -266,4 +266,41 @@ test('migrates the v0.1.0 flat-pacing shape under pacing.likes', () => {
   // Stats and failures preserved.
   assert.equal(state.stats.success, 5);
   assert.equal(state.failures['2'], 'rate_limited');
+});
+
+test('per-category stats are isolated (likes vs replies)', () => {
+  const store = createStore(memoryStorage());
+  store.bumpStat('likes', 'success', 3);
+  store.bumpStat('replies', 'success', 5);
+  store.bumpStat('likes', 'failure', 1);
+  const state = store.loadState();
+  assert.equal(state.stats.likes.success, 3);
+  assert.equal(state.stats.likes.failure, 1);
+  assert.equal(state.stats.replies.success, 5);
+  assert.equal(state.stats.replies.failure, 0);
+});
+
+test('bumpStat throws for an unknown stat name', () => {
+  const store = createStore(memoryStorage());
+  assert.throws(() => store.bumpStat('likes', 'bogus'), /unknown per-category stat/);
+});
+
+test('migrates v0.1.0 flat stats into stats.likes', () => {
+  const storage = memoryStorage();
+  const oldState = {
+    cursor: { likes: 'x' },
+    processed: [],
+    config: { deleteLikes: true, dryRun: false, pacing: { baseMs: 1200, jitter: 0.5, batchSize: 50, batchPauseMs: 60000, backoffBaseMs: 30000, backoffMaxMs: 300000 } },
+    stats: { success: 7, failure: 2, skipped: 1, consecutiveFailures: 0, startedAt: 12345, lastActionAt: 67890 },
+    failures: {},
+  };
+  storage.set('batchd_state', JSON.stringify(oldState));
+  const store = createStore(storage);
+  const state = store.loadState();
+  assert.equal(state.stats.likes.success, 7);
+  assert.equal(state.stats.likes.failure, 2);
+  assert.equal(state.stats.likes.skipped, 1);
+  assert.equal(state.stats.replies.success, 0);
+  assert.equal(state.stats.startedAt, 12345);
+  assert.equal(state.stats.lastActionAt, 67890);
 });

@@ -134,7 +134,7 @@ test('likes skip and document non-captcha failures instead of aborting after fiv
     assert.equal(result.processed, 1);
     assert.equal(store.processedHas('7'), true);
     assert.equal(store.processedHas('1'), false);
-    assert.equal(state.stats.failure, 6);
+    assert.equal(state.stats.likes.failure, 6);
     assert.equal(state.failures['1'], 'unknown');
     assert.equal(state.failures['6'], 'unknown');
   });
@@ -248,7 +248,7 @@ test('likes treat stale targets as a re-query event, not a failure', async () =>
 
     const state = store.loadState();
     assert.equal(result.status, 'done');
-    assert.equal(state.stats.failure, 0);
+    assert.equal(state.stats.likes.failure, 0);
     assert.deepEqual(state.failures, {});
   });
 });
@@ -404,7 +404,7 @@ test('replies skip and document non-captcha failures instead of aborting after f
     assert.equal(result.status, 'done');
     assert.equal(result.processed, 1);
     assert.equal(store.processedHas('r7'), true);
-    assert.equal(state.stats.failure, 6);
+    assert.equal(state.stats.replies.failure, 6);
   });
 });
 
@@ -468,4 +468,5 @@ test('replies default pacing preset is 3000ms base / batchSize 20 / batchPauseMs
   assert.equal(PACING_PRESETS.replies.backoffBaseMs, 60000);
   assert.equal(PACING_PRESETS.replies.backoffMaxMs, 600000);
 });
+
 

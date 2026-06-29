@@ -68,6 +68,7 @@ export function mountPanel({ store, runSequential, onReset, log = () => {} }) {
           store.updateConfig({ [otherKey]: false });
         }
       }
+      renderStats();
       refreshGoEnabled();
     });
   }
@@ -129,7 +130,7 @@ export function mountPanel({ store, runSequential, onReset, log = () => {} }) {
     if (!confirm('Reset all Batchd state? This clears processed IDs and stats.')) return;
     store.reset();
     onReset?.();
-    renderStats(store.loadState().stats);
+    renderStats();
     appendLog('state reset');
   });
 
@@ -170,14 +171,29 @@ export function mountPanel({ store, runSequential, onReset, log = () => {} }) {
         `detecting (${p.visible} visible, ${p.eligible} eligible, ${p.skippedThisRun} skipped, idle ${p.idleStreak})`;
     } else if (p.phase === 'acting') {
       appendLog(`#${p.index + 1} ${p.postId} → ${p.kind}`);
-      renderStats(store.loadState().stats);
+      renderStats();
     }
   }
 
-  function renderStats(stats) {
-    root.querySelector('[data-stat="success"]').textContent = stats.success ?? 0;
-    root.querySelector('[data-stat="failure"]').textContent = stats.failure ?? 0;
-    root.querySelector('[data-stat="skipped"]').textContent = stats.skipped ?? 0;
+  // Determine which category the stats boxes should reflect.
+  // Looks at the toggles: the active mode is what we are about
+  // to run. Falls back to the last category that has any
+  // recorded stats, then to 'likes' as a default.
+  function activeStatCategory() {
+    const cfg = store.loadState().config;
+    if (cfg.deleteLikes) return 'likes';
+    if (cfg.deleteReplies) return 'replies';
+    const stats = store.loadState().stats;
+    if (stats && stats.replies && (stats.replies.success + stats.replies.failure + stats.replies.skipped) > 0) return 'replies';
+    return 'likes';
+  }
+  function renderStats() {
+    const cat = activeStatCategory();
+    const bucket = store.loadState().stats[cat] || { success: 0, failure: 0, skipped: 0 };
+    root.querySelector('[data-stats-mode]').textContent = cat;
+    root.querySelector('[data-stat="success"]').textContent = bucket.success ?? 0;
+    root.querySelector('[data-stat="failure"]').textContent = bucket.failure ?? 0;
+    root.querySelector('[data-stat="skipped"]').textContent = bucket.skipped ?? 0;
   }
 
   function appendLog(line) {
@@ -190,7 +206,7 @@ export function mountPanel({ store, runSequential, onReset, log = () => {} }) {
   }
 
   // Initial render
-  renderStats(store.loadState().stats);
+  renderStats();
   refreshGoEnabled();
 
   return {
@@ -225,6 +241,7 @@ function template() {
       <button class="secondary" data-action="stop">Stop</button>
     </div>
     <div class="stats">
+      <div class="stats-header">stats <span class="stats-mode" data-stats-mode>likes</span></div>
       <div class="stat"><div class="label">success</div><div class="value" data-stat="success">0</div></div>
       <div class="stat"><div class="label">failure</div><div class="value" data-stat="failure">0</div></div>
       <div class="stat"><div class="label">skipped</div><div class="value" data-stat="skipped">0</div></div>
@@ -275,6 +292,8 @@ const PANEL_CSS = `
 #batchd-panel button { background: #1d9bf0; color: #fff; border: 0; border-radius: 999px; padding: 6px 12px; font: inherit; cursor: pointer; }
 #batchd-panel button:disabled { background: #253341; color: #6e7681; cursor: not-allowed; }
 #batchd-panel button.secondary { background: #253341; }
+#batchd-panel .stats-header { font-size: 10px; color: #6e7681; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+#batchd-panel .stats-mode { display: inline-block; background: #253341; color: #1d9bf0; font-size: 10px; padding: 1px 6px; border-radius: 999px; margin-left: 4px; text-transform: lowercase; letter-spacing: 0; font-weight: 600; }
 #batchd-panel .stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; font-size: 12px; margin-bottom: 8px; }
 #batchd-panel .stat { background: #192734; border-radius: 6px; padding: 4px 6px; text-align: center; }
 #batchd-panel .stat .label { color: #8b98a5; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; }

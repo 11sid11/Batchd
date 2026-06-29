@@ -1,4 +1,4 @@
-// Run loop — the orchestrator that drives cleanup for one category.
+// Run loop - the orchestrator that drives cleanup for one category.
 //
 // Pure control flow. All DOM access is delegated to selectors.js; all
 // decisions about pacing, persistence, and failure handling are delegated
@@ -30,7 +30,7 @@ export async function runCategory(category, { store, username, signal, onProgres
 
   log(`run: starting category ${category}`);
 
-  // Ensure we're on the right tab. If we aren't, navigate and stop; the
+  // Ensure we are on the right tab. If we are not, navigate and stop; the
   // user will reload and resume from the saved cursor.
   const expected = tabUrl(username, category);
   if (!location.href.startsWith(expected.split('?')[0])) {
@@ -40,7 +40,7 @@ export async function runCategory(category, { store, username, signal, onProgres
   }
 
   const cfg = store.loadState().config;
-  if (cfg.dryRun) log('run: DRY RUN — no clicks will be performed');
+  if (cfg.dryRun) log('run: DRY RUN - no clicks will be performed');
   store.markRunStarted();
 
   const pacing = pacingFor(category, cfg);
@@ -119,7 +119,7 @@ async function runCategoryCore({ category, store, signal, onProgress, log, cfg, 
         log(`run: refill found ${afterEligible.length} eligible ${category}`);
       } else {
         idleStreak++;
-        log(`run: idle ${idleStreak}/${idleLimit} — visible=${afterTargets.length}, skippedThisRun=${failedThisRun.size}`);
+        log(`run: idle ${idleStreak}/${idleLimit} - visible=${afterTargets.length}, skippedThisRun=${failedThisRun.size}`);
       }
       continue;
     }
@@ -180,25 +180,25 @@ async function runCategoryCore({ category, store, signal, onProgress, log, cfg, 
 
     if (kind === 'success' || kind === 'already_gone' || kind === 'not_actionable') {
       store.processedAdd(target.postId);
-      store.bumpStat(kind === 'success' ? 'success' : 'skipped');
+      store.bumpStat(category, kind === 'success' ? 'success' : 'skipped');
       store.saveCursor(category, target.postId);
       processedThisRun++;
       failureBackoffStep = 0;
       idleStreak = 0;
 
       if (shouldBatchPause(processedThisRun, pacing.batchSize)) {
-        log(`run: batch pause — ${pacing.batchPauseMs}ms rest`);
+        log(`run: batch pause - ${pacing.batchPauseMs}ms rest`);
         await runtime.sleep(pacing.batchPauseMs);
       }
     } else {
-      store.bumpStat('failure');
+      store.bumpStat(category, 'failure');
       store.recordFailure(target.postId, kind);
       failedThisRun.add(target.postId);
       failureBackoffStep++;
       idleStreak = 0;
 
       const backoff = backoffMs(failureBackoffStep, pacing.backoffBaseMs, pacing.backoffMaxMs);
-      log(`run: skipped failed post ${target.postId} (${kind}) — backing off ${backoff}ms`);
+      log(`run: skipped failed post ${target.postId} (${kind}) - backing off ${backoff}ms`);
       await runtime.sleep(backoff);
     }
 
@@ -218,4 +218,3 @@ async function runCategoryCore({ category, store, signal, onProgress, log, cfg, 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
-
