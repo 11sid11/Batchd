@@ -2,6 +2,8 @@
 
 **Bulk-delete your own X.com (Twitter) likes and replies, from your browser, with a click.**
 
+![Batchd in action - the floating control panel with the Likes and Replies toggles, the typed DELETE confirmation, and the success / failure / skipped counters](docs/batchd.gif)
+
 Batchd is a small [Tampermonkey](https://www.tampermonkey.net/) userscript
 that walks your **Likes** tab (`/likes`) and your **Replies** tab
 (`/with_replies`) on x.com and removes the engagement, one post at a time,
