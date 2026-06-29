@@ -322,7 +322,7 @@ test('replies uses the replies pacing preset for base delay', async () => {
         scrollForMore: async () => ({ reason: 'scrolled', articles: visible.length }),
         click: async (t) => {
           visible = visible.filter((candidate) => candidate.postId !== t.postId);
-          return { outcome: { buttonFound: false } };
+          return { outcome: { success: true } };
         },
       },
     });
@@ -360,7 +360,7 @@ test('replies processes targets and saves the replies cursor separately from lik
         click: async (t) => {
           calls.push(`click:${t.postId}`);
           visible = [];
-          return { outcome: { buttonFound: false } };
+          return { outcome: { success: true } };
         },
       },
     });
@@ -424,7 +424,7 @@ test('replies pause after exactly the configured number of successful actions', 
         scrollForMore: async () => ({ reason: 'scrolled', articles: visible.length }),
         click: async (t) => {
           visible = visible.filter((candidate) => candidate.postId !== t.postId);
-          return { outcome: { buttonFound: false } };
+          return { outcome: { success: true } };
         },
       },
     });
@@ -468,3 +468,4 @@ test('replies default pacing preset is 3000ms base / batchSize 20 / batchPauseMs
   assert.equal(PACING_PRESETS.replies.backoffBaseMs, 60000);
   assert.equal(PACING_PRESETS.replies.backoffMaxMs, 600000);
 });
+

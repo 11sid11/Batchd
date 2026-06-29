@@ -52,7 +52,7 @@ test('clickUndo treats removed unlike signal as a successful flip', async () => 
   }
 });
 
-test('clickUndo treats a missing refreshed article as already gone', async () => {
+test('clickUndo returns success when the post disappears after the click', async () => {
   const originalDocument = globalThis.document;
   try {
     const undoButton = { click() {} };
@@ -65,9 +65,13 @@ test('clickUndo treats a missing refreshed article as already gone', async () =>
     const result = await clickUndo({
       undoButton,
       postId: '456',
+      article: { isConnected: true },
     });
 
-    assert.deepEqual(result.outcome, { buttonFound: false });
+    // Post was gone after the click — we successfully unliked and X
+    // removed the post from the visible timeline (or it was deleted
+    // by something else mid-flight). Either way: success.
+    assert.deepEqual(result.outcome, { success: true });
   } finally {
     globalThis.document = originalDocument;
   }
@@ -535,3 +539,32 @@ test('clickDelete matches "Delete" menu item case-insensitively through the real
 
 
 
+
+
+
+test('clickUndo returns stale when the target is detached before the click', async () => {
+  const result = await clickUndo({
+    undoButton: { isConnected: false, click() {} },
+    postId: '789',
+    article: { isConnected: true },
+  });
+  assert.deepEqual(result.outcome, { stale: true });
+});
+
+test('clickDelete returns success when the post disappears after the confirm click', async () => {
+  const target = {
+    postId: 'r-2',
+    moreButton: { isConnected: true, click() {} },
+    article: { isConnected: true },
+  };
+  const result = await clickDelete(target, {
+    deps: {
+      sleep: async () => {},
+      openMenu: async (t) => { t.moreButton.click(); return { ok: true }; },
+      findMenuItem: () => ({ click() {} }),
+      findConfirmBtn: () => ({ click() {} }),
+      waitForGone: async () => ({ buttonFound: false }),
+    },
+  });
+  assert.deepEqual(result.outcome, { success: true });
+});

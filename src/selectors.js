@@ -154,6 +154,13 @@ export async function clickUndo(target, { signal } = {}) {
 
   // Wait for the button to flip (or disappear, or for us to time out).
   const flipped = await waitForFlip(target, signal);
+  // Success: the heart was removed (X honored the click) OR the entire
+  // article/post is gone (we just unliked and X removed it from the
+  // rendered timeline, or it was deleted by something else in the
+  // meantime). Either way, the unlike took effect.
+  if (flipped.buttonFound === false || flipped.buttonStillThere === false) {
+    return { outcome: { success: true } };
+  }
   return { outcome: flipped };
 }
 
@@ -309,8 +316,13 @@ export async function clickDelete(target, opts = {}) {
   if (!confBtn) return { outcome: { error: new Error('Delete confirm modal not found') } };
   confBtn.click();
 
-  // 4. Wait for the post to disappear.
+  // 4. Wait for the post to disappear. If it does, that is success —
+  //    we just confirmed the delete and X removed the post. If it
+  //    is still there after the timeout, X did not honor the click.
   const gone = await waitGone(target.postId, { signal, sleep: sleepFn });
+  if (gone.buttonFound === false) {
+    return { outcome: { success: true } };
+  }
   return { outcome: gone };
 }
 
@@ -496,6 +508,8 @@ export const TIMING = {
   MENU_APPEAR_TIMEOUT_MS,
   MODAL_APPEAR_TIMEOUT_MS,
 };
+
+
 
 
 
