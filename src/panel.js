@@ -292,7 +292,7 @@ const PANEL_CSS = `
 #batchd-panel button { background: #1d9bf0; color: #fff; border: 0; border-radius: 999px; padding: 6px 12px; font: inherit; cursor: pointer; }
 #batchd-panel button:disabled { background: #253341; color: #6e7681; cursor: not-allowed; }
 #batchd-panel button.secondary { background: #253341; }
-#batchd-panel .stats-header { font-size: 10px; color: #6e7681; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+#batchd-panel .stats-header { font-size: 10px; color: #6e7681; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; grid-column: 1 / -1; }
 #batchd-panel .stats-mode { display: inline-block; background: #253341; color: #1d9bf0; font-size: 10px; padding: 1px 6px; border-radius: 999px; margin-left: 4px; text-transform: lowercase; letter-spacing: 0; font-weight: 600; }
 #batchd-panel .stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; font-size: 12px; margin-bottom: 8px; }
 #batchd-panel .stat { background: #192734; border-radius: 6px; padding: 4px 6px; text-align: center; }
