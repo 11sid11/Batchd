@@ -1,8 +1,19 @@
-# Batchd
+<p align="center">
+  <img src="assets/logo.svg" width="160" alt="Batchd">
+</p>
 
-**Bulk-delete your own X.com (Twitter) likes and replies, from your browser, with a click.**
+<h1 align="center">Batchd</h1>
 
-![Batchd in action - the floating control panel with the Likes and Replies toggles, the typed DELETE confirmation, and the success / failure / skipped counters](docs/batchd.gif)
+<p align="center"><strong>Bulk-delete your own X.com (Twitter) likes and replies, from your browser, with a click.</strong></p>
+
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/11sid11/Batchd?style=flat-square" alt="License: MIT"></a>
+  <a href="https://github.com/11sid11/Batchd/releases"><img src="https://img.shields.io/github/v/release/11sid11/Batchd?style=flat-square" alt="Latest release"></a>
+  <a href="https://github.com/11sid11/Batchd/stargazers"><img src="https://img.shields.io/github/stars/11sid11/Batchd?style=flat-square" alt="Stars"></a>
+  <a href="https://github.com/11sid11/Batchd/issues"><img src="https://img.shields.io/github/issues/11sid11/Batchd?style=flat-square" alt="Issues"></a>
+</p>
+
+<p align="center"><img src="docs/batchd.gif" alt="Batchd in action - the floating control panel with the Likes and Replies toggles, the typed DELETE confirmation, and the success / failure / skipped counters"></p>
 
 Batchd is a small [Tampermonkey](https://www.tampermonkey.net/) userscript
 that walks your **Likes** tab (`/likes`) and your **Replies** tab
@@ -14,7 +25,7 @@ entirely in your already-logged-in browser.
 If you want to clean up years of "hearted" posts, or wipe the replies you
 regretted, Batchd is the tool.
 
-## Why this tool
+## 🧹 Why this tool
 
 Most "bulk delete" tools for X are paid SaaS dashboards that ask for your
 account credentials or an OAuth token and then act on your behalf from a
@@ -30,7 +41,7 @@ reads post IDs from the rendered timeline and clicks the existing on-screen
 controls. Your session cookie is reused, your data never leaves your
 machine, and there's nothing to pay for.
 
-## Features
+## ✨ Features
 
 - **Bulk unlike X.com posts** — walks `/likes` and unlikes each visible post
 - **Bulk delete X.com replies** — walks `/with_replies` and drives the
@@ -54,7 +65,7 @@ machine, and there's nothing to pay for.
 - **One-click navigation** — `→ /likes` and `→ /with_replies` links in the
   panel take you to the right tab automatically
 
-## Quick start
+## 🚀 Quick start
 
 1. **Install Tampermonkey** in your browser:
    [Chrome](https://chrome.google.com/webstore/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo),
@@ -76,7 +87,7 @@ That is the whole flow. The script will scroll the timeline, unlike/delete
 each visible post one at a time, and stop when the timeline is exhausted
 (or when you hit Stop).
 
-## Safety
+## ⚠️ Safety
 
 This script **permanently deletes** engagement from your X.com account.
 There is no undo.
@@ -104,7 +115,7 @@ The script also does not handle the case where someone is logged in to
 multiple X accounts in the same browser — it operates on whichever
 account is currently signed in.
 
-## Browser compatibility
+## 🌐 Browser compatibility
 
 | Browser | Works? |
 |---------|--------|
@@ -116,7 +127,7 @@ account is currently signed in.
 | Brave (Tampermonkey) | ✅ |
 | Mobile browsers | ❌ — userscripts need a desktop userscript manager |
 
-## How it works
+## 🔧 How it works
 
 Batchd is a single Tampermonkey userscript built from a small set of
 ESM modules and concatenated by `scripts/build.js` into a distributable
@@ -153,7 +164,7 @@ For a deeper design rationale, see the [architecture decision records](docs/adr/
 For a glossary of terms used throughout the codebase, see
 [`CONTEXT.md`](CONTEXT.md).
 
-## Compare to alternatives
+## 🆚 Compare to alternatives
 
 There are several other tools for cleaning up your X.com history. Here is
 how Batchd compares:
@@ -185,7 +196,7 @@ how Batchd compares:
 - **Open and free, forever.** No free tier that suddenly becomes paid,
   no acquisition risk, no shutdown risk.
 
-## Limitations
+## 🚧 Limitations
 
 - **Reposts and quote reposts are not supported.** X's "Undo repost" UI
   is unreliable and the prior Batchd implementation that handled them
@@ -201,7 +212,7 @@ how Batchd compares:
   may hit rate limits or captcha. The defaults are conservative; if you
   see captcha, stop, wait, and run again with default pacing.
 
-## Development
+## 🛠️ Development
 
 ```sh
 git clone https://github.com/11sid11/Batchd.git
@@ -222,7 +233,7 @@ selector behavior.
 This is a personal-use tool. Contributions are welcome — open an issue
 first if you want to discuss a change larger than a small fix.
 
-## License
+## 📄 License
 
 [MIT](LICENSE). Use it, fork it, ship it. Attribution appreciated but
 not required.

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Batchd">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="200" y2="200" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1d9bf0"/>
+      <stop offset="1" stop-color="#0c7bbf"/>
+    </linearGradient>
+  </defs>
+  <rect width="200" height="200" rx="40" fill="url(#g)"/>
+  <text x="100" y="148" text-anchor="middle" font-family="-apple-system, system-ui, Segoe UI, Roboto, sans-serif" font-weight="800" font-size="170" fill="white">B</text>
+  <g stroke="white" stroke-width="7" stroke-linecap="round" opacity="0.55" fill="none">
+    <line x1="158" y1="60" x2="182" y2="48"/>
+    <line x1="153" y1="100" x2="185" y2="100"/>
+    <line x1="158" y1="140" x2="182" y2="152"/>
+  </g>
+</svg>
