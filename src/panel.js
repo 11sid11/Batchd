@@ -5,7 +5,7 @@
 
 const LOG_MAX = 50;
 const CONFIRM_LIKES = 'DELETE';
-const CONFIRM_REPLIES = 'DELETE MY REPLIES';
+const CONFIRM_REPLIES = 'DELETE';
 
 export function mountPanel({ store, runSequential, onReset, log = () => {} }) {
   const root = document.createElement('div');
@@ -58,6 +58,16 @@ export function mountPanel({ store, runSequential, onReset, log = () => {} }) {
     if (el) el.checked = cfg;
     el?.addEventListener('change', () => {
       store.updateConfig({ [key]: el.checked });
+      // Mutual exclusivity: Likes and Replies work on
+      // different URLs, so they cannot be active together.
+      if (el.checked && (key === 'deleteLikes' || key === 'deleteReplies')) {
+        const otherKey = key === 'deleteLikes' ? 'deleteReplies' : 'deleteLikes';
+        const otherEl = root.querySelector('[data-toggle=' + otherKey + ']');
+        if (otherEl && otherEl.checked) {
+          otherEl.checked = false;
+          store.updateConfig({ [otherKey]: false });
+        }
+      }
       refreshGoEnabled();
     });
   }
@@ -91,6 +101,19 @@ export function mountPanel({ store, runSequential, onReset, log = () => {} }) {
   }
 
   confirmInput.addEventListener('input', refreshGoEnabled);
+
+  // Goto buttons: click to navigate to the relevant tab.
+  // Mirrors the URLs in TAB_PATHS in selectors.js.
+  function gotoTab(category) {
+    const m = location.pathname.match(/^\/([^/]+)/);
+    const username = m ? m[1] : 'me';
+    const path = category === 'replies' ? '/with_replies' : '/' + category;
+    location.assign('https://x.com/' + username + path);
+  }
+  for (const cat of ['likes', 'replies']) {
+    const btn = root.querySelector('[data-goto=' + cat + ']');
+    btn?.addEventListener('click', () => gotoTab(cat));
+  }
   refreshGoEnabled();
 
   // Stop / Reset
@@ -183,8 +206,14 @@ function template() {
     <div class="status" data-status>idle</div>
     <div class="elapsed" data-elapsed>00:00</div>
     <div class="toggles">
-      <label class="toggle"><input type="checkbox" data-toggle="deleteLikes"> Likes</label>
-      <label class="toggle"><input type="checkbox" data-toggle="deleteReplies"> Replies</label>
+      <div class="toggle-line">
+        <label class="toggle"><input type="checkbox" data-toggle="deleteLikes"> Likes</label>
+        <button class="goto" data-goto="likes" title="Open your /likes tab">/likes</button>
+      </div>
+      <div class="toggle-line">
+        <label class="toggle"><input type="checkbox" data-toggle="deleteReplies"> Replies</label>
+        <button class="goto" data-goto="replies" title="Open your /with_replies tab">/with_replies</button>
+      </div>
       <label class="toggle"><input type="checkbox" data-toggle="dryRun"> Dry run (preview only)</label>
     </div>
     <div class="confirm">
@@ -237,6 +266,9 @@ const PANEL_CSS = `
 #batchd-panel .elapsed { font-size: 11px; color: #6e7681; font-family: ui-monospace, "SF Mono", Menlo, monospace; margin-bottom: 10px; letter-spacing: 0.04em; }
 #batchd-panel .toggles { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
 #batchd-panel label.toggle { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+#batchd-panel .toggle-line { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+#batchd-panel .goto { background: transparent; border: 0; color: #1d9bf0; font-size: 11px; padding: 0 4px; cursor: pointer; font-family: inherit; }
+#batchd-panel .goto:hover { text-decoration: underline; }
 #batchd-panel .confirm { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
 #batchd-panel input[type="text"] { background: #192734; border: 1px solid #38444d; color: #e7e9ea; border-radius: 4px; padding: 4px 6px; font: inherit; }
 #batchd-panel .buttons { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
