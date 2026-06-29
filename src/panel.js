@@ -18,7 +18,38 @@ export function mountPanel({ store, runSequential, onReset, log = () => {} }) {
   const state = {
     abortController: null,
     status: 'idle',   // idle | running | paused | done | error
+    runStartedAt: 0,
+    timerInterval: null,
   };
+
+  // ---- Stopwatch: starts on Go, stops on Stop or natural completion. ----
+  function startTimer() {
+    if (state.timerInterval) clearInterval(state.timerInterval);
+    state.runStartedAt = Date.now();
+    state.timerInterval = setInterval(updateElapsed, 1000);
+    updateElapsed();
+  }
+  function stopTimer() {
+    if (state.timerInterval) {
+      clearInterval(state.timerInterval);
+      state.timerInterval = null;
+    }
+    updateElapsed();
+  }
+  function updateElapsed() {
+    const el = root.querySelector('[data-elapsed]');
+    if (!el) return;
+    if (!state.runStartedAt) { el.textContent = '00:00'; return; }
+    el.textContent = formatElapsed(Date.now() - state.runStartedAt);
+  }
+  function formatElapsed(ms) {
+    const total = Math.max(0, Math.floor(ms / 1000));
+    const h = Math.floor(total / 3600);
+    const m = Math.floor((total % 3600) / 60);
+    const s = total % 60;
+    const pad = (n) => String(n).padStart(2, '0');
+    return h > 0 ? pad(h) + ':' + pad(m) + ':' + pad(s) : pad(m) + ':' + pad(s);
+  }
 
   // Wire up toggles -> store
   for (const key of ['deleteLikes', 'deleteReplies', 'dryRun']) {
@@ -67,6 +98,7 @@ export function mountPanel({ store, runSequential, onReset, log = () => {} }) {
     if (state.abortController) {
       state.abortController.abort();
       setStatus('aborting');
+      stopTimer();
     }
   });
 
@@ -82,6 +114,7 @@ export function mountPanel({ store, runSequential, onReset, log = () => {} }) {
   goBtn.addEventListener('click', async () => {
     state.abortController = new AbortController();
     setStatus('running');
+    startTimer();
     goBtn.disabled = true;
     try {
       const result = await runSequential({ signal: state.abortController.signal, onProgress: onRunProgress });
@@ -92,6 +125,7 @@ export function mountPanel({ store, runSequential, onReset, log = () => {} }) {
       setStatus('error');
     } finally {
       state.abortController = null;
+      stopTimer();
       refreshGoEnabled();
     }
   });
@@ -147,6 +181,7 @@ function template() {
   return `
     <h1>Batchd <button class="secondary" data-action="reset" title="Reset all state" style="padding:2px 8px;font-size:11px;">reset</button></h1>
     <div class="status" data-status>idle</div>
+    <div class="elapsed" data-elapsed>00:00</div>
     <div class="toggles">
       <label class="toggle"><input type="checkbox" data-toggle="deleteLikes"> Likes</label>
       <label class="toggle"><input type="checkbox" data-toggle="deleteReplies"> Replies</label>
@@ -199,6 +234,7 @@ const PANEL_CSS = `
 }
 #batchd-panel h1 { font-size: 14px; font-weight: 700; margin: 0 0 8px; display: flex; justify-content: space-between; align-items: center; }
 #batchd-panel .status { font-size: 12px; color: #8b98a5; margin-bottom: 8px; }
+#batchd-panel .elapsed { font-size: 11px; color: #6e7681; font-family: ui-monospace, "SF Mono", Menlo, monospace; margin-bottom: 10px; letter-spacing: 0.04em; }
 #batchd-panel .toggles { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
 #batchd-panel label.toggle { display: flex; align-items: center; gap: 6px; cursor: pointer; }
 #batchd-panel .confirm { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
@@ -214,3 +250,14 @@ const PANEL_CSS = `
 #batchd-panel .note { color: #8b98a5; font-size: 11px; line-height: 1.3; margin: 0 0 8px; }
 #batchd-panel .log { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11px; background: #192734; border-radius: 6px; padding: 4px 6px; max-height: 120px; overflow-y: auto; color: #8b98a5; }
 `.trim();
+
+
+
+
+
+
+
+
+
+
+
