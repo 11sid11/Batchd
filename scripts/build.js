@@ -124,7 +124,7 @@ async function build() {
 // @name         Batchd
 // @namespace    batchd
 // @version      ${(await readFile('package.json', 'utf8')).match(/"version":\s*"([^"]+)"/)[1]}
-// @description  Bulk-delete your X.com likes.
+// @description  Bulk-delete your X.com likes and replies.
 // @match        https://x.com/*
 // @match        https://twitter.com/*
 // @grant        GM_getValue

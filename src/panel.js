@@ -4,6 +4,8 @@
 // object via mountPanel() so the entry-point can wire button clicks.
 
 const LOG_MAX = 50;
+const CONFIRM_LIKES = 'DELETE';
+const CONFIRM_REPLIES = 'DELETE MY REPLIES';
 
 export function mountPanel({ store, runSequential, onReset, log = () => {} }) {
   const root = document.createElement('div');
@@ -19,18 +21,30 @@ export function mountPanel({ store, runSequential, onReset, log = () => {} }) {
   };
 
   // Wire up toggles -> store
-  for (const key of ['deleteLikes', 'dryRun']) {
+  for (const key of ['deleteLikes', 'deleteReplies', 'dryRun']) {
     const el = root.querySelector(`[data-toggle="${key}"]`);
     const cfg = store.loadState().config[key];
     if (el) el.checked = cfg;
-    el?.addEventListener('change', () => store.updateConfig({ [key]: el.checked }));
+    el?.addEventListener('change', () => {
+      store.updateConfig({ [key]: el.checked });
+      refreshGoEnabled();
+    });
   }
 
-  // Confirmation: Go button stays disabled until the user types "DELETE"
-  // (unless dryRun is on, in which case no confirmation is required).
+  // Confirmation: Go button stays disabled until the user types the
+  // required confirmation string. The required string depends on which
+  // mode is active: "DELETE MY REPLIES" if replies is on (with or
+  // without likes), otherwise "DELETE". The stronger string wins.
+  // Dry run bypasses the gate for either mode.
   const confirmInput = root.querySelector('[data-confirm]');
   const goBtn = root.querySelector('[data-action="go"]');
   const dryRunEl = root.querySelector('[data-toggle="dryRun"]');
+
+  function requiredConfirmText() {
+    const cfg = store.loadState().config;
+    if (cfg.deleteReplies) return CONFIRM_REPLIES;
+    return CONFIRM_LIKES;
+  }
 
   function refreshGoEnabled() {
     if (state.status === 'running') {
@@ -41,11 +55,11 @@ export function mountPanel({ store, runSequential, onReset, log = () => {} }) {
       goBtn.disabled = false;
       return;
     }
-    goBtn.disabled = confirmInput.value !== 'DELETE';
+    confirmInput.placeholder = requiredConfirmText();
+    goBtn.disabled = confirmInput.value !== requiredConfirmText();
   }
 
   confirmInput.addEventListener('input', refreshGoEnabled);
-  dryRunEl.addEventListener('change', refreshGoEnabled);
   refreshGoEnabled();
 
   // Stop / Reset
@@ -89,7 +103,6 @@ export function mountPanel({ store, runSequential, onReset, log = () => {} }) {
 
   function onRunProgress(p) {
     if (p.phase === 'scrolling') {
-      // Throttle: only update status text every scroll
       const detail = p.eligible == null
         ? `${p.articles} posts, ${p.emptyStreak} empty`
         : `${p.visible} visible, ${p.eligible} eligible, ${p.skippedThisRun} skipped, idle ${p.idleStreak}`;
@@ -114,7 +127,6 @@ export function mountPanel({ store, runSequential, onReset, log = () => {} }) {
     const el = root.querySelector('[data-log]');
     const ts = new Date().toLocaleTimeString();
     el.textContent = `[${ts}] ${line}\n` + el.textContent;
-    // Trim to LOG_MAX lines
     const lines = el.textContent.split('\n');
     if (lines.length > LOG_MAX) el.textContent = lines.slice(0, LOG_MAX).join('\n');
     log(line);
@@ -122,6 +134,7 @@ export function mountPanel({ store, runSequential, onReset, log = () => {} }) {
 
   // Initial render
   renderStats(store.loadState().stats);
+  refreshGoEnabled();
 
   return {
     setStatus,
@@ -136,10 +149,11 @@ function template() {
     <div class="status" data-status>idle</div>
     <div class="toggles">
       <label class="toggle"><input type="checkbox" data-toggle="deleteLikes"> Likes</label>
+      <label class="toggle"><input type="checkbox" data-toggle="deleteReplies"> Replies</label>
       <label class="toggle"><input type="checkbox" data-toggle="dryRun"> Dry run (preview only)</label>
     </div>
     <div class="confirm">
-      <label>Type <code>DELETE</code> to confirm (skipped in dry run):</label>
+      <label>Type <code id="confirm-required">DELETE</code> to confirm (skipped in dry run):</label>
       <input type="text" data-confirm autocomplete="off" spellcheck="false">
     </div>
     <div class="buttons">
@@ -151,18 +165,13 @@ function template() {
       <div class="stat"><div class="label">failure</div><div class="value" data-stat="failure">0</div></div>
       <div class="stat"><div class="label">skipped</div><div class="value" data-stat="skipped">0</div></div>
     </div>
-    <div class="note">Likes cleanup is best effort. X may hide or stall a few posts; refresh/rerun or remove leftovers manually.</div>
+    <div class="note">Likes and replies cleanup is best effort. X may hide or stall a few posts; refresh/rerun or remove leftovers manually.</div>
     <div class="log" data-log></div>
   `;
 }
 
 function injectStyles() {
   if (document.getElementById('batchd-panel-styles')) return;
-  const link = document.createElement('link');
-  link.id = 'batchd-panel-styles';
-  link.rel = 'stylesheet';
-  // Inline a <style> tag rather than @import so this works without a build
-  // step in the userscript.
   const style = document.createElement('style');
   style.id = 'batchd-panel-styles';
   style.textContent = PANEL_CSS;

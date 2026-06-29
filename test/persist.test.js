@@ -195,3 +195,75 @@ test('touchLastAction updates lastActionAt to ~now', () => {
   assert.ok(t > 0);
   assert.ok(Date.now() - t < 1000);
 });
+
+import { PACING_PRESETS, pacingFor } from '../src/persist.js';
+
+test('cursor is null by default for replies too', () => {
+  const store = createStore(memoryStorage());
+  assert.equal(store.loadCursor('replies'), null);
+});
+
+test('saveCursor for replies does not clobber the likes cursor', () => {
+  const store = createStore(memoryStorage());
+  store.saveCursor('likes', '111');
+  store.saveCursor('replies', '222');
+  assert.equal(store.loadCursor('likes'), '111');
+  assert.equal(store.loadCursor('replies'), '222');
+});
+
+test('pacingFor resolves a known category to its preset', () => {
+  const cfg = defaultState().config;
+  assert.equal(pacingFor('likes', cfg).baseMs, PACING_PRESETS.likes.baseMs);
+  assert.equal(pacingFor('replies', cfg).baseMs, PACING_PRESETS.replies.baseMs);
+});
+
+test('pacingFor lets user overrides win over the preset', () => {
+  const cfg = {
+    pacing: {
+      likes: { baseMs: 999 },
+      replies: { baseMs: 1234 },
+    },
+  };
+  assert.equal(pacingFor('likes', cfg).baseMs, 999);
+  assert.equal(pacingFor('replies', cfg).baseMs, 1234);
+});
+
+test('pacingFor throws for an unknown category', () => {
+  assert.throws(() => pacingFor('bookmarks', defaultState().config), /Unknown pacing category/);
+});
+
+test('migrates the v0.1.0 flat-pacing shape under pacing.likes', () => {
+  const storage = memoryStorage();
+  // Old v0.1.0 state: flat pacing, only deleteLikes flag, cursor only has likes.
+  const oldState = {
+    cursor: { likes: 'oldcursor' },
+    processed: ['1', '2'],
+    config: {
+      deleteLikes: true,
+      dryRun: false,
+      pacing: { baseMs: 1200, jitter: 0.5, batchSize: 50, batchPauseMs: 60000, backoffBaseMs: 30000, backoffMaxMs: 300000 },
+    },
+    stats: { success: 5, failure: 1, skipped: 0, consecutiveFailures: 0, startedAt: 0, lastActionAt: 0 },
+    failures: { '2': 'rate_limited' },
+  };
+  storage.set('batchd_state', JSON.stringify(oldState));
+
+  const store = createStore(storage);
+  const state = store.loadState();
+
+  // Old cursor preserved.
+  assert.equal(state.cursor.likes, 'oldcursor');
+  // New cursor key added with default null.
+  assert.equal(state.cursor.replies, null);
+  // Old pacing re-parented under likes; replies preset added.
+  assert.equal(state.config.pacing.likes.baseMs, 1200);
+  assert.equal(state.config.pacing.likes.jitter, 0.5);
+  assert.equal(state.config.pacing.replies.baseMs, PACING_PRESETS.replies.baseMs);
+  // deleteReplies defaulted to false on migration.
+  assert.equal(state.config.deleteReplies, false);
+  // Processed set preserved.
+  assert.deepEqual(state.processed, ['1', '2']);
+  // Stats and failures preserved.
+  assert.equal(state.stats.success, 5);
+  assert.equal(state.failures['2'], 'rate_limited');
+});

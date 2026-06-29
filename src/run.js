@@ -1,22 +1,33 @@
-// Run loop — the orchestrator that drives the Likes cleanup.
+// Run loop — the orchestrator that drives cleanup for one category.
 //
 // Pure control flow. All DOM access is delegated to selectors.js; all
 // decisions about pacing, persistence, and failure handling are delegated
 // to their respective modules.
+//
+// The same core loop handles likes and replies. The only per-category
+// inputs are the click action (clickUndo vs clickDelete) and the pacing
+// preset (resolved via pacingFor).
 
 import {
   findEngagedPosts,
-  clickUndo,
+  clickAction,
   scrollForMore,
   isCaptchaPresent,
   tabUrl,
 } from './selectors.js';
 import { nextDelay, shouldBatchPause, backoffMs } from './pacing.js';
 import { classify } from './failures.js';
+import { pacingFor } from './persist.js';
 
 const DEFAULT_IDLE_SCROLL_WATCHDOG = 20;
 
+const SUPPORTED_CATEGORIES = ['likes', 'replies'];
+
 export async function runCategory(category, { store, username, signal, onProgress, log = () => {}, deps = {} }) {
+  if (!SUPPORTED_CATEGORIES.includes(category)) {
+    throw new Error(`Unsupported category: ${category}`);
+  }
+
   log(`run: starting category ${category}`);
 
   // Ensure we're on the right tab. If we aren't, navigate and stop; the
@@ -32,9 +43,11 @@ export async function runCategory(category, { store, username, signal, onProgres
   if (cfg.dryRun) log('run: DRY RUN — no clicks will be performed');
   store.markRunStarted();
 
+  const pacing = pacingFor(category, cfg);
+
   const runtime = {
     findEngagedPosts,
-    clickUndo,
+    click: (target, opts) => clickAction(category, target, opts),
     scrollForMore,
     isCaptchaPresent,
     sleep,
@@ -42,14 +55,16 @@ export async function runCategory(category, { store, username, signal, onProgres
     ...deps,
   };
 
-  if (category === 'likes') {
-    return runLikesCategory({ category, store, signal, onProgress, log, cfg, runtime });
-  }
-
-  throw new Error(`Unsupported category: ${category}`);
+  return runCategoryCore({
+    category, store, signal, onProgress, log, cfg, pacing, runtime,
+  });
 }
 
-async function runLikesCategory({ category, store, signal, onProgress, log, cfg, runtime }) {
+// Shared core loop. Identical structure for every category: refill loop,
+// idle watchdog, batch pause, failure backoff. The only differences are
+// the click function (resolved in the runtime) and the pacing numbers
+// (passed in as a resolved object).
+async function runCategoryCore({ category, store, signal, onProgress, log, cfg, pacing, runtime }) {
   let processedThisRun = 0;
   let failureBackoffStep = 0;
   let idleStreak = 0;
@@ -101,7 +116,7 @@ async function runLikesCategory({ category, store, signal, onProgress, log, cfg,
 
       if (afterEligible.length > 0) {
         idleStreak = 0;
-        log(`run: refill found ${afterEligible.length} eligible likes`);
+        log(`run: refill found ${afterEligible.length} eligible ${category}`);
       } else {
         idleStreak++;
         log(`run: idle ${idleStreak}/${idleLimit} — visible=${afterTargets.length}, skippedThisRun=${failedThisRun.size}`);
@@ -110,7 +125,7 @@ async function runLikesCategory({ category, store, signal, onProgress, log, cfg,
     }
 
     const target = targets[0];
-    const delay = nextDelay(cfg.pacing.baseMs, cfg.pacing.jitter);
+    const delay = nextDelay(pacing.baseMs, pacing.jitter);
     await runtime.sleep(delay);
 
     if (cfg.dryRun) {
@@ -132,11 +147,11 @@ async function runLikesCategory({ category, store, signal, onProgress, log, cfg,
 
     let clickResult;
     try {
-      clickResult = await runtime.clickUndo(target, { signal });
+      clickResult = await runtime.click(target, { signal });
     } catch (err) {
-      clickResult = target.undoButton?.isConnected === false
+      clickResult = (target.undoButton || target.moreButton)?.isConnected === false
         ? { outcome: { stale: true } }
-        : { outcome: { buttonFound: true, error: err } };
+        : { outcome: { error: err } };
     }
 
     const kind = classify(clickResult.outcome);
@@ -171,9 +186,9 @@ async function runLikesCategory({ category, store, signal, onProgress, log, cfg,
       failureBackoffStep = 0;
       idleStreak = 0;
 
-      if (shouldBatchPause(processedThisRun, cfg.pacing.batchSize)) {
-        log(`run: batch pause — ${cfg.pacing.batchPauseMs}ms rest`);
-        await runtime.sleep(cfg.pacing.batchPauseMs);
+      if (shouldBatchPause(processedThisRun, pacing.batchSize)) {
+        log(`run: batch pause — ${pacing.batchPauseMs}ms rest`);
+        await runtime.sleep(pacing.batchPauseMs);
       }
     } else {
       store.bumpStat('failure');
@@ -182,7 +197,7 @@ async function runLikesCategory({ category, store, signal, onProgress, log, cfg,
       failureBackoffStep++;
       idleStreak = 0;
 
-      const backoff = backoffMs(failureBackoffStep, cfg.pacing.backoffBaseMs, cfg.pacing.backoffMaxMs);
+      const backoff = backoffMs(failureBackoffStep, pacing.backoffBaseMs, pacing.backoffMaxMs);
       log(`run: skipped failed post ${target.postId} (${kind}) — backing off ${backoff}ms`);
       await runtime.sleep(backoff);
     }
