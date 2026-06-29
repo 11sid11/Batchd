@@ -33,7 +33,7 @@ const CLICK_FLIP_TIMEOUT_MS = 5000;
 // menu/modal is rendered client-side; the longer timeout is reserved for
 // network round-trips.
 const MENU_APPEAR_TIMEOUT_MS = 2000;
-const MODAL_APPEAR_TIMEOUT_MS = 2000;
+const MODAL_APPEAR_TIMEOUT_MS = 5000;
 
 export function tabUrl(username, category) {
   const path = TAB_PATHS[category];
@@ -307,20 +307,78 @@ function findMenuItemImpl({ text }) {
 }
 
 function findConfirmButtonImpl() {
-  // X's confirm dialog uses a known testid. The button inside it confirms
-  // the destructive action.
-  const dialog = document.querySelector('[data-testid="tweetDeleteConfirm"]')
-    || document.querySelector('[role="dialog"]');
-  if (!dialog) return null;
-  // Find a button inside the dialog whose accessible name is "Delete".
-  const buttons = dialog.querySelectorAll('button');
-  for (const btn of buttons) {
-    const label = (btn.getAttribute('aria-label') || btn.textContent || '').trim();
-    if (label === 'Delete') return btn;
+  // The delete-post confirm modal sits inside #layers. X has changed the
+  // structure enough times that we cannot rely on a single testid. The
+  // order of operations:
+  //   1. Find the dialog. Try the canonical testid, then the modal
+  //      layer (#layers > div[2]), then any visible role=dialog.
+  //   2. Find the destructive "Delete" button inside it by label.
+  //   3. Fall back: identify the Cancel button, return the other one.
+  //   4. Last resort: per the live X build observed on 2026-06-30,
+  //      the buttons container is
+  //      `#layers/div[2]/.../div[2]/div[2]/div[2]/button[1]`,
+  //      and the Delete button is button[1] (the first in the container).
+  //      So with 2 buttons, default to buttons[0].
+  let dialog = document.querySelector('[data-testid="tweetDeleteConfirm"]');
+
+  if (!dialog) {
+    const layers = document.getElementById('layers');
+    const modalLayer = layers && layers.children[1];
+    if (modalLayer) {
+      dialog = modalLayer.querySelector('[role="dialog"]') || modalLayer;
+    }
   }
-  // Last-resort: the second button in the dialog (X renders [Cancel][Delete]).
-  if (buttons.length >= 2) return buttons[buttons.length - 1];
-  return null;
+
+  if (!dialog) {
+    for (const d of document.querySelectorAll('[role="dialog"]')) {
+      if (d.offsetParent !== null) { dialog = d; break; }
+    }
+  }
+
+  if (!dialog) return null;
+
+  const buttons = Array.from(dialog.querySelectorAll('button'));
+  if (buttons.length === 0) return null;
+
+  // Diagnostic: log what we found so the user can see why matching
+  // succeeded or failed. Stripped in production builds later if noisy.
+  if (typeof console !== 'undefined' && console.log) {
+    console.log('[batchd] confirm dialog buttons:', buttons.map((b) => ({
+      aria: b.getAttribute('aria-label') || '',
+      text: (b.textContent || '').trim().slice(0, 30),
+    })));
+  }
+  // 2. Match by accessible name (case-insensitive). X may render the
+  //    label as "Delete", "Delete post", or "Delete reply" depending
+  //    on the post type and locale.
+  const isDeleteLabel = (s) => {
+    const t = s.trim().toLowerCase();
+    return t === 'delete' || t === 'delete post' || t === 'delete reply';
+  };
+
+  for (const btn of buttons) {
+    if (isDeleteLabel(btn.getAttribute('aria-label') || '')) return btn;
+  }
+  for (const btn of buttons) {
+    if (isDeleteLabel(btn.textContent || '')) return btn;
+  }
+
+  // 3. Two-button heuristic: if one is Cancel, the other is Delete.
+  if (buttons.length === 2) {
+    for (const btn of buttons) {
+      const label = (btn.getAttribute('aria-label') || btn.textContent || '').trim().toLowerCase();
+      if (label === 'cancel' || label.startsWith('cancel')) {
+        return btn === buttons[0] ? buttons[1] : buttons[0];
+      }
+    }
+    // 4. No clear Cancel label — fall through to positional. With 2
+    //    buttons in the current X build, button[1] (XPath 1-based) is
+    //    Delete, which is buttons[0] in 0-based.
+    return buttons[0];
+  }
+
+  // Last resort: first button.
+  return buttons[0];
 }
 
 async function waitForPostGoneImpl(postId, { signal, sleep: sleepFn }) {
@@ -385,3 +443,6 @@ export const TIMING = {
   MENU_APPEAR_TIMEOUT_MS,
   MODAL_APPEAR_TIMEOUT_MS,
 };
+
+
+
