@@ -178,7 +178,7 @@ async function runCategoryCore({ category, store, signal, onProgress, log, cfg, 
       return { status: 'blocked', reason: 'captcha' };
     }
 
-    if (kind === 'success' || kind === 'already_gone') {
+    if (kind === 'success' || kind === 'already_gone' || kind === 'not_actionable') {
       store.processedAdd(target.postId);
       store.bumpStat(kind === 'success' ? 'success' : 'skipped');
       store.saveCursor(category, target.postId);
@@ -218,3 +218,4 @@ async function runCategoryCore({ category, store, signal, onProgress, log, cfg, 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
+

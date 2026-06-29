@@ -199,7 +199,7 @@ function findReplies() {
     const postId = extractPostId(article);
     if (!postId || seen.has(postId)) continue;
 
-    const moreButton = findMoreButton(article);
+    const moreButton = findMoreButton(article, postId);
     if (!moreButton) continue;   // not actionable
 
     seen.add(postId);
@@ -211,9 +211,38 @@ function findReplies() {
 // Locate the "more" / "caret" menu trigger on a post. Three signals, in
 // priority order — mirrors collectUnlikeButtons() so a future drift in
 // X's DOM only requires updating one place.
-function findMoreButton(article) {
+function findMoreButton(article, targetPostId) {
+  // On the replies tab, X renders each thread as a single
+  // article[data-testid=tweet] containing BOTH the parent post AND
+  // the user's reply. Each post has its own "more" menu. If we
+  // find the first more button in the article, we usually pick up
+  // the parent's, which has no "Delete" option. So when we know the
+  // target post ID, scope the search to the container that holds
+  // the link to that specific post.
+  if (targetPostId) {
+    const statusLink = article.querySelector(`a[href*="/status/${targetPostId}"]`);
+    if (statusLink) {
+      // Walk up from the status link to the smallest container that
+      // has a more button in it. Walk is bounded by the article and
+      // by depth, so a malformed tree doesn't blow the stack.
+      let el = statusLink.parentElement;
+      for (let depth = 0; el && el !== article && depth < 25; depth++) {
+        const scoped = findMoreButtonInNode(el);
+        if (scoped) return scoped;
+        el = el.parentElement;
+      }
+    }
+  }
+  // Fall back to the article-wide search.
+  return findMoreButtonInNode(article);
+}
+
+// Three-signal search for a more-menu trigger inside a single node.
+// Mirrors collectUnlikeButtons() so a future drift in X's DOM only
+// requires updating one place.
+function findMoreButtonInNode(node) {
   // 1. data-testid="caret" — X's current canonical testid for the more menu.
-  const caret = article.querySelector('[data-testid="caret"]');
+  const caret = node.querySelector('[data-testid="caret"]');
   if (caret) {
     if (caret.tagName === 'BUTTON') return caret;
     const btn = caret.closest('button');
@@ -221,7 +250,7 @@ function findMoreButton(article) {
   }
 
   // 2. aria-label="More" — stable across X releases that localize via labels.
-  const labelMatch = article.querySelector('[aria-label="More"]');
+  const labelMatch = node.querySelector('[aria-label="More"]');
   if (labelMatch) {
     if (labelMatch.tagName === 'BUTTON') return labelMatch;
     const btn = labelMatch.closest('button');
@@ -229,7 +258,7 @@ function findMoreButton(article) {
   }
 
   // 3. data-testid fallback (X has used both `caret` and `More` historically).
-  const moreId = article.querySelector('[data-testid="more"]');
+  const moreId = node.querySelector('[data-testid="more"]');
   if (moreId) {
     if (moreId.tagName === 'BUTTON') return moreId;
     const btn = moreId.closest('button');
@@ -265,7 +294,14 @@ export async function clickDelete(target, opts = {}) {
 
   // 2. Find and click the "Delete" item in the menu.
   const itemHit = findItem({ text: 'Delete' });
-  if (!itemHit) return { outcome: { error: new Error('Delete menu item not found') } };
+  if (!itemHit) {
+    // The menu opened but has no "Delete" item — this is the parent
+    // post's menu, not ours. Close the menu so it does not block
+    // subsequent page interactions, then return a skip-classified
+    // outcome the run loop will not retry.
+    (deps.closeMenu ?? closeOpenMenuImpl)();
+    return { outcome: { notDeleteable: true } };
+  }
   itemHit.click();
 
   // 3. Wait for and click the confirm button in the delete-post modal.
@@ -293,17 +329,34 @@ async function openMoreMenuImpl(target, { signal, sleep: sleepFn }) {
 }
 
 function findMenuItemImpl({ text }) {
-  // X renders dropdown items as role=menuitem. Match exactly on text
-  // because the menu contains "Follow", "Mute", "Block", "Delete", etc.
+  // X renders dropdown items as role=menuitem. Match on text
+  // (case-insensitive) because the menu contains "Follow", "Mute",
+  // "Block", "Delete", etc. The "Delete" item may render as "Delete",
+  // "Delete post", or "Delete reply" depending on the post type.
+  const wanted = (text || '').toLowerCase();
   const items = document.querySelectorAll('[role="menuitem"]');
   for (const item of items) {
-    if ((item.textContent || '').trim() === text) return item;
+    const t = (item.textContent || '').trim().toLowerCase();
+    if (t === wanted || t === wanted + ' post' || t === wanted + ' reply') return item;
   }
   // Fallback: prefix match, in case X wraps the text in a span.
   for (const item of items) {
-    if ((item.textContent || '').trim().startsWith(text)) return item;
+    const t = (item.textContent || '').trim().toLowerCase();
+    if (t.startsWith(wanted)) return item;
   }
   return null;
+}
+
+// Press Escape to close any open menu. Used as a defensive cleanup
+// when we clicked a more button that turned out to be the wrong one
+// (e.g. the parent post's button on a thread — has no "Delete" item).
+// Without this, the open menu blocks subsequent page interactions.
+function closeOpenMenuImpl() {
+  // Uses KeyboardEvent if available (browsers) and falls back to a plain
+  // Event (Node test env) so the function is safe to call from any
+  // environment.
+  const Ctor = (typeof KeyboardEvent !== "undefined") ? KeyboardEvent : Event;
+  document.dispatchEvent(new Ctor("keydown", { key: "Escape", bubbles: true, cancelable: true }));
 }
 
 function findConfirmButtonImpl() {
@@ -443,6 +496,11 @@ export const TIMING = {
   MENU_APPEAR_TIMEOUT_MS,
   MODAL_APPEAR_TIMEOUT_MS,
 };
+
+
+
+
+
 
 
 

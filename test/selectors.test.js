@@ -120,8 +120,6 @@ test('findEngagedPosts dedupes unlike signals for the same liked post', () => {
   }
 });
 
-import { findEngagedPosts, clickAction, clickDelete, tabUrl } from '../src/selectors.js';
-
 test('tabUrl resolves replies to the profile Replies tab', () => {
   assert.equal(tabUrl('alice', 'replies'), 'https://x.com/alice/with_replies');
 });
@@ -339,3 +337,201 @@ test('clickAction dispatches replies to clickDelete', async () => {
   assert.match(result.outcome.error.message, /Delete confirm modal not found/);
   assert.equal(called, true);
 });
+
+test('findReplies scopes the more button to the target post id, not the parent', () => {
+  const originalDocument = globalThis.document;
+  try {
+    // Simulate X's thread rendering: one article containing the parent
+    // post AND the user's reply. The parent's more button is the first
+    // [data-testid=caret] in the article; the reply's is nested deeper,
+    // in a subtree that contains the link to the reply's status.
+    const parentMore = { tagName: 'BUTTON', isConnected: true };
+    const replyMore = { tagName: 'BUTTON', isConnected: true };
+
+    const parentLink = { getAttribute: (n) => (n === 'href' ? '/someone/status/111' : null) };
+    const replyLink = { getAttribute: (n) => (n === 'href' ? '/me/status/222' : null) };
+
+    // The reply subtree is a div containing replyLink + replyMore.
+    const replySubtree = {
+      querySelector(sel) {
+        if (sel === '[data-testid="caret"]') return replyMore;
+  if (sel.includes('/status/')) return replyLink;
+        return null;
+      },
+    };
+    // The article-wide query finds the parent's caret first; the
+    // scoped walk from replyLink should find replyMore instead.
+    const article = {
+      isConnected: true,
+      querySelector(sel) {
+        if (sel === '[data-testid="caret"]') return parentMore;
+  if (sel.includes('/status/')) return replyLink;
+        return null;
+      },
+      // querySelectorAll is used by the older 3-signal search when
+      // scoped lookups fail; we won't hit it on this test, but keep
+      // an empty list as a safety net.
+      querySelectorAll: () => [],
+    };
+
+    // Override .children-equivalent via a manual walk in findMoreButton.
+    // The implementation walks parentElement; we model that by
+    // giving the reply link a parentElement chain that reaches the
+    // replySubtree first, then the article.
+    Object.defineProperty(replyLink, 'parentElement', {
+      value: {
+        ...replySubtree,
+        parentElement: {
+          querySelector(sel) {
+            if (sel === '[data-testid="caret"]') return null;  // not in this layer
+            return null;
+          },
+          parentElement: {
+            ...article,
+            parentElement: { parentElement: null },
+          },
+        },
+      },
+    });
+    globalThis.document = {
+      querySelectorAll: (s) => (s === 'article[data-testid="tweet"]' ? [article] : []),
+    };
+
+    const results = findEngagedPosts('replies');
+    assert.equal(results.length, 1);
+    assert.equal(results[0].postId, '222');
+    assert.equal(results[0].moreButton, replyMore, "should pick the reply more button, not the parent");
+  } finally { globalThis.document = originalDocument; }
+});
+
+test('findReplies falls back to the article-wide search when no status link is found', () => {
+  const originalDocument = globalThis.document;
+  try {
+    const moreButton = { tagName: 'BUTTON', isConnected: true };
+    const link = { getAttribute: (n) => (n === 'href' ? '/me/status/333' : null) };
+    const article = {
+      isConnected: true,
+      querySelector(sel) {
+        if (sel === '[data-testid="caret"]') return moreButton;
+        if (sel.includes('/status/')) return link;
+        return null;
+      },
+    };
+    globalThis.document = {
+      querySelectorAll: (s) => (s === 'article[data-testid="tweet"]' ? [article] : []),
+    };
+    const results = findEngagedPosts('replies');
+    assert.equal(results.length, 1);
+    assert.equal(results[0].moreButton, moreButton);
+  } finally { globalThis.document = originalDocument; }
+});
+
+
+// Helper: import internals via a small wrapper that mirrors clickDelete's
+// dispatch. We test the case-insensitive match by calling the real
+// findMenuItemImpl through a synthetic clickDelete that bypasses openMenu.
+test('clickDelete closes the menu when Delete is not in it (parent post case)', async () => {
+  let escapeDispatched = false;
+  const originalDispatch = globalThis.document?.dispatchEvent;
+  const originalDocument = globalThis.document;
+  try {
+    globalThis.document = {
+      ...(originalDocument || {}),
+      dispatchEvent: (e) => { if (e && e.key === 'Escape') escapeDispatched = true; return true; },
+    };
+    const target = {
+      postId: '999',
+      moreButton: { isConnected: true, click() {} },
+      article: { isConnected: true },
+    };
+    // openMenu succeeds, but findMenuItem returns null because the menu
+    // contains Follow/Mute/Block (the parent post's menu) — not Delete.
+    const result = await clickDelete(target, {
+      deps: {
+        sleep: async () => {},
+        openMenu: async () => ({ ok: true }),
+        findMenuItem: () => null,
+      },
+    });
+    assert.equal(escapeDispatched, true, 'should dispatch Escape to close the wrong menu');
+    assert.deepEqual(result.outcome, { notDeleteable: true });
+  } finally {
+    if (originalDocument === undefined) delete globalThis.document;
+    else globalThis.document = originalDocument;
+  }
+});
+
+test('clickDelete does not close the menu when Delete IS in it', async () => {
+  let escapeDispatched = false;
+  const originalDocument = globalThis.document;
+  try {
+    globalThis.document = {
+      ...(originalDocument || {}),
+      dispatchEvent: () => { escapeDispatched = true; return true; },
+    };
+    const target = {
+      postId: 'r-1',
+      moreButton: { isConnected: true, click() {} },
+      article: { isConnected: true },
+    };
+    // Successful full sequence — should NOT trigger Escape.
+    await clickDelete(target, {
+      deps: {
+        sleep: async () => {},
+        openMenu: async (t) => { t.moreButton.click(); return { ok: true }; },
+        findMenuItem: () => ({ click() {} }),
+        findConfirmBtn: () => null,   // modal times out, but we get the "modal not found" path
+      },
+    });
+    assert.equal(escapeDispatched, false, 'should not close the menu when Delete is present');
+  } finally {
+    if (originalDocument === undefined) delete globalThis.document;
+    else globalThis.document = originalDocument;
+  }
+});
+
+test('clickDelete matches "Delete" menu item case-insensitively through the real finder', async () => {
+  // Build a real DOM with the menu and a lowercase "delete" item so
+  // we exercise findMenuItemImpl directly (no mock).
+  const originalDocument = globalThis.document;
+  try {
+    const menuItem = { click() {} };
+    globalThis.document = {
+      querySelectorAll(sel) {
+        if (sel === '[role="menuitem"]') return [menuItem];
+        return [];
+      },
+      querySelector(sel) {
+        if (sel === '[role="menu"]') return {};   // menu appeared
+        if (sel.startsWith('article[data-testid="tweet"]')) return null;
+        return null;
+      },
+    };
+    // Override the textContent getter to return lowercase 'delete'.
+    Object.defineProperty(menuItem, 'textContent', { value: 'delete' });
+
+    const target = {
+      postId: 'r-1',
+      moreButton: { isConnected: true, click() {} },
+      article: { isConnected: true },
+    };
+    const result = await clickDelete(target, {
+      deps: {
+        sleep: async () => {},
+        // openMenu does the actual click, returns ok
+        openMenu: async (t) => { t.moreButton.click(); return { ok: true }; },
+        // findMenuItem NOT provided — falls through to findMenuItemImpl
+        findConfirmBtn: () => null,   // modal times out — that path tests downstream
+      },
+    });
+    // We expect the 'modal not found' error since we didn't mock confirm.
+    // The point is: we got PAST the menu-item check (no 'notDeleteable'),
+    // proving the case-insensitive match worked.
+    assert.ok(result.outcome.error, 'expected downstream error');
+    assert.match(result.outcome.error.message, /Delete confirm modal not found/);
+  } finally { globalThis.document = originalDocument; }
+});
+
+
+
+
