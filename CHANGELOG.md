@@ -23,7 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   first to mount sets `window.__batchd = { instance, store, panel }`;
   the second sees the marker and bails with a one-time console
   message. Implemented in `src/yield.js`.
-- **22 new tests** (108+2=110 total). `src/storage.gm.js` (6),
+- **22 new tests** (118 total). `src/storage.gm.js` (6),
   `src/storage.chrome.js` (8), `src/yield.js` (5), and a
   regression-guard for the `==UserScript==`-strip regex in the
   build script (2). All green.
@@ -32,9 +32,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`scripts/build.js` now emits two artifacts** - `dist/batchd.user.js`
   (Tampermonkey) and `dist/extension/` (Chrome MV3 folder with
   `content.js`, `manifest.json`, and `icons/`). Both share the eight
-  shared logic modules (`yield`, `pacing`, `persist`, `failures`,
-  `selectors`, `run`, `panel`); only the storage adapter and the entry
-  point differ.
+  shared logic modules (`entry.js`, `yield.js`, `pacing.js`, `persist.js`,
+  `failures`, `selectors`, `run`, `panel`); only the storage adapter
+  and the entry point differ.
 - **`src/batchd.user.js` no longer contains the inline `gmStorage`
   factory** - it now `import`s the function from `src/storage.gm.js`.
   Same behavior, one line of glue code.

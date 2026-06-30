@@ -131,7 +131,7 @@ account is currently signed in.
 
 Batchd is a single Tampermonkey userscript built from a small set of
 ESM modules and concatenated by `scripts/build.js` into a distributable
-`dist/batchd.user.js`. The whole bundle is around 60KB.
+`dist/batchd.user.js`. The whole bundle is around 78KB.
 
 The architecture is intentionally minimal:
 
@@ -227,8 +227,8 @@ Tampermonkey. The `src/` files are ESM modules and not directly runnable.
 
 Tests use `node --test` against the source modules with mocked DOM
 (`src/selectors.js` is the main DOM-touching file; the others are pure
-logic). 70+ test cases cover pacing, persistence, the run loop, and
-selector behavior.
+logic). 118 test cases cover pacing, persistence, the run loop, the
+storage adapters, and selector behavior.
 
 This is a personal-use tool. Contributions are welcome — open an issue
 first if you want to discuss a change larger than a small fix.
