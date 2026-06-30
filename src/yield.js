@@ -8,15 +8,21 @@
 // each other. See ADR 0004 and the **Yield check** term in
 // `CONTEXT.md` for the full rationale.
 //
-// `checkAndYield(instance, target)` returns `false` if no other
+// `hasCompetingInstance(instance, target)` returns `false` if no other
 // Batchd is running on `target` (which is `window` in both the TM
 // userscript and the Chrome content script), and stamps the
 // `__batchd.instance` field on `target` so a later entry point can
 // see it. Returns `true` if another instance is already running; the
 // caller should bail. Both entry points call this first thing, so
 // exactly one wins regardless of which loads first.
+//
+// Note: this function only sets the `instance` field. The other
+// `__batchd` fields (`store`, `panel`) are stamped later by the
+// winning entry point's bootstrap, so we deliberately do NOT merge
+// into a pre-existing `__batchd` here — that would risk clobbering
+// or surprising the caller.
 
-export function checkAndYield(instance, target = globalThis) {
+export function hasCompetingInstance(instance, target = globalThis) {
   const existing = target.__batchd?.instance;
   if (existing) {
     if (existing === instance) {
@@ -32,6 +38,6 @@ export function checkAndYield(instance, target = globalThis) {
     );
     return true;
   }
-  target.__batchd = { ...target.__batchd, instance };
+  target.__batchd = { instance };
   return false;
 }

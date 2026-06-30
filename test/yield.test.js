@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { checkAndYield } from "../src/yield.js";
+import { hasCompetingInstance } from "../src/yield.js";
 
 // Suppress console.info from the module during tests so the test output
 // stays clean. Each test passes its own `target` object so the global
@@ -8,43 +8,46 @@ import { checkAndYield } from "../src/yield.js";
 
 test("returns false on first call and stamps the instance on the target", () => {
   const target = {};
-  const yielded = checkAndYield("tampermonkey", target);
+  const yielded = hasCompetingInstance("tampermonkey", target);
   assert.equal(yielded, false);
   assert.equal(target.__batchd.instance, "tampermonkey");
 });
 
 test("returns true on second call to the same target", () => {
   const target = {};
-  checkAndYield("tampermonkey", target);
-  const yielded = checkAndYield("chrome-extension", target);
+  hasCompetingInstance("tampermonkey", target);
+  const yielded = hasCompetingInstance("chrome-extension", target);
   assert.equal(yielded, true);
 });
 
 test("returns false on a fresh target even after the first target was marked", () => {
   const a = {};
   const b = {};
-  checkAndYield("tampermonkey", a);
-  const yielded = checkAndYield("chrome-extension", b);
+  hasCompetingInstance("tampermonkey", a);
+  const yielded = hasCompetingInstance("chrome-extension", b);
   assert.equal(yielded, false);
   assert.equal(b.__batchd.instance, "chrome-extension");
 });
 
-test("merges with existing __batchd rather than overwriting it", () => {
-  // The caller may have pre-populated __batchd with debug handles
-  // (store, panel) before invoking the yield check. The yield check
-  // should add the `instance` field without clobbering them.
+test("overwrites a pre-existing __batchd object (yield only sets `instance`)", () => {
+  // The yield check is the FIRST thing the bootstrap runs, before
+  // store/panel exist. A pre-existing __batchd here would only happen
+  // from a debug handle or a leftover stamp — yielding should reset
+  // it to just { instance } rather than merge, so the entry-point's
+  // later `window.__batchd = { instance, store, panel }` is the sole
+  // owner of the full shape.
   const target = { __batchd: { store: { stub: true }, panel: { stub: true } } };
-  const yielded = checkAndYield("tampermonkey", target);
+  const yielded = hasCompetingInstance("tampermonkey", target);
   assert.equal(yielded, false);
   assert.equal(target.__batchd.instance, "tampermonkey");
-  assert.deepEqual(target.__batchd.store, { stub: true });
-  assert.deepEqual(target.__batchd.panel, { stub: true });
+  assert.equal(target.__batchd.store, undefined);
+  assert.equal(target.__batchd.panel, undefined);
 });
 
 test("defaults the target to globalThis when not passed", () => {
   // Install a marker on globalThis, then verify default-target behavior.
   globalThis.__batchd = { instance: "preexisting" };
-  const yielded = checkAndYield("tampermonkey");
+  const yielded = hasCompetingInstance("tampermonkey");
   assert.equal(yielded, true);
   delete globalThis.__batchd;
 });
@@ -52,8 +55,8 @@ test("defaults the target to globalThis when not passed", () => {
 test("console.info is called when yielding to a different instance, naming both", (t) => {
   const mockInfo = t.mock.method(console, "info");
   const target = {};
-  checkAndYield("tampermonkey", target);
-  checkAndYield("chrome-extension", target);
+  hasCompetingInstance("tampermonkey", target);
+  hasCompetingInstance("chrome-extension", target);
   assert.equal(mockInfo.mock.callCount(), 1);
   const msg = mockInfo.mock.calls[0].arguments[0];
   assert.match(msg, /tampermonkey/);
@@ -63,8 +66,8 @@ test("console.info is called when yielding to a different instance, naming both"
 test("same-instance re-call returns false (does not yield to itself) and does not log", (t) => {
   const mockInfo = t.mock.method(console, "info");
   const target = {};
-  const first = checkAndYield("tampermonkey", target);
-  const second = checkAndYield("tampermonkey", target);
+  const first = hasCompetingInstance("tampermonkey", target);
+  const second = hasCompetingInstance("tampermonkey", target);
   assert.equal(first, false);
   // Document the actual corrected behavior: a repeat call from the
   // winning instance is a no-op success, not a self-yield that would

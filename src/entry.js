@@ -12,12 +12,8 @@
 // synchronously and the chrome storage backend is callback-based.
 // `gmStorage()` is already synchronous, so the Tampermonkey entry can
 // call this helper at top level.
-//
-// Note: `checkAndYield` is intentionally kept under its current name
-// here; the planned rename to `hasCompetingInstance` is Task 5 work
-// and lives outside this helper.
 
-import { checkAndYield } from './yield.js';
+import { hasCompetingInstance } from './yield.js';
 
 export function bootstrapBatchd({ instanceName, storage }) {
   const { createStore, mountPanel, runCategory } = Batchd;
@@ -26,7 +22,7 @@ export function bootstrapBatchd({ instanceName, storage }) {
   // If a second Batchd instance is already running on this window, log
   // a one-time notice and bail before touching anything. See the
   // "Yield check" term in CONTEXT.md and ADR 0004 for the full rationale.
-  if (checkAndYield(instanceName)) return;
+  if (hasCompetingInstance(instanceName)) return;
 
   // ---- Username discovery --------------------------------------------------
   // Pull the username out of the URL so the run loop can navigate to
