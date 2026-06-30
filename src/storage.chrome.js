@@ -18,10 +18,18 @@
 //      session; the storage backend is the source of truth across
 //      sessions.
 //
+// The chrome backend is feature-detected ONCE at construction so the
+// hot `set` path skips the `typeof chrome !== "undefined" &&
+// chrome.storage?.local?.set` check on every call. Without this
+// cache, every persisted state change paid a property-lookup tax
+// proportional to the number of state keys the user mutates.
+//
 // The Tampermonkey userscript has its own parallel adapter at
 // `src/storage.gm.js` that wraps `GM_getValue` / `GM_setValue`. The
 // contract is identical so `src/persist.js` is platform-agnostic.
 // See ADR 0004 in `docs/adr/` for the architecture.
+
+import { safeCall } from "./safeCall.js";
 
 export function loadChromeStorage() {
   return new Promise((resolve) => {
@@ -29,7 +37,7 @@ export function loadChromeStorage() {
       resolve({});
       return;
     }
-    try {
+    const invoked = safeCall(() => {
       chrome.storage.local.get(null, (items) => {
         // Surface backend errors instead of silently swallowing them —
         // without this, a quota blow-up or invalidated context leaves
@@ -46,10 +54,11 @@ export function loadChromeStorage() {
         }
         resolve(items || {});
       });
-    } catch {
-      // Extension context invalidated or storage API threw synchronously.
-      // Fall back to an empty cache — same shape the persist layer would
-      // see on a fresh install with no prior state.
+    });
+    if (invoked === undefined) {
+      // safeCall caught a synchronous throw (e.g., extension context
+      // invalidated). Fall back to an empty cache — same shape the
+      // persist layer would see on a fresh install with no prior state.
       resolve({});
     }
   });
@@ -57,32 +66,34 @@ export function loadChromeStorage() {
 
 export function chromeStorage(initial) {
   const cache = { ...(initial || {}) };
+  // Cache the feature-detection result so the hot `set` path doesn't
+  // re-check on every write. A freshly-installed extension always
+  // sees chrome here, but in a test or stripped-down runtime the
+  // check still has to defend against undefined.
+  const canWrite =
+    typeof chrome !== "undefined" &&
+    typeof chrome.storage?.local?.set === "function";
   return {
     get: (k) => cache[k],
     set: (k, v) => {
       cache[k] = v;
-      try {
-        if (typeof chrome !== "undefined" && chrome.storage?.local?.set) {
-          // Provide a callback so we can observe chrome.runtime.lastError.
-          // Writes return synchronously (in-memory cache already updated)
-          // so the adapter stays best-effort; we never throw because the
-          // running session's cache write already succeeded — losing only
-          // the cross-session persistence is preferable to a noisy failure.
-          // See ADR 0004 for why persist.js treats the adapter as fire-and-forget.
-          chrome.storage.local.set({ [k]: v }, () => {
-            if (chrome.runtime?.lastError) {
-              console.error(
-                "Batchd: chrome.storage.local.set failed:",
-                chrome.runtime.lastError.message
-              );
-            }
-          });
-        }
-      } catch {
-        // Extension context invalidated (e.g. mid-update). The in-memory
-        // cache still holds the write, so the running session is
-        // consistent; only the cross-session persistence is lost.
-      }
+      if (!canWrite) return;
+      safeCall(() => {
+        // Provide a callback so we can observe chrome.runtime.lastError.
+        // Writes return synchronously (in-memory cache already updated)
+        // so the adapter stays best-effort; we never throw because the
+        // running session's cache write already succeeded — losing only
+        // the cross-session persistence is preferable to a noisy failure.
+        // See ADR 0004 for why persist.js treats the adapter as fire-and-forget.
+        chrome.storage.local.set({ [k]: v }, () => {
+          if (chrome.runtime?.lastError) {
+            console.error(
+              "Batchd: chrome.storage.local.set failed:",
+              chrome.runtime.lastError.message
+            );
+          }
+        });
+      });
     },
   };
 }
