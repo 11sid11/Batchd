@@ -15,6 +15,16 @@
 
 <p align="center"><img src="docs/batchd.gif" alt="Batchd in action - the floating control panel with the Likes and Replies toggles, the typed DELETE confirmation, and the success / failure / skipped counters"></p>
 
+<p align="center">
+  <a href="#quick-start"><img src="https://img.shields.io/badge/Chrome-Add_to_Chrome-1d9bf0?style=for-the-badge&logo=google-chrome&logoColor=white" alt="Add to Chrome"></a>
+  &nbsp;
+  <a href="https://github.com/11sid11/Batchd/releases/latest/download/batchd.user.js"><img src="https://img.shields.io/badge/Tampermonkey-Install_UserScript-000000?style=for-the-badge&logo=tampermonkey&logoColor=white" alt="Install Tampermonkey userscript"></a>
+  &nbsp;
+  <a href="https://github.com/11sid11/Batchd/releases"><img src="https://img.shields.io/badge/GitHub-View_Release-181717?style=for-the-badge&logo=github&logoColor=white" alt="View on GitHub"></a>
+</p>
+
+<br>
+
 Batchd is a small [Tampermonkey](https://www.tampermonkey.net/) userscript
 that walks your **Likes** tab (`/likes`) and your **Replies** tab
 (`/with_replies`) on x.com and removes the engagement, one post at a time,
@@ -25,7 +35,20 @@ entirely in your already-logged-in browser.
 If you want to clean up years of "hearted" posts, or wipe the replies you
 regretted, Batchd is the tool.
 
-## 🧹 Why this tool
+## Contents
+
+- [Why this tool](#why-this-tool)
+- [Features](#features)
+- [Quick start](#quick-start)
+- [Safety](#safety)
+- [Browser compatibility](#browser-compatibility)
+- [How it works](#how-it-works)
+- [Compare to alternatives](#compare-to-alternatives)
+- [Limitations](#limitations)
+- [Development](#development)
+- [License](#license)
+
+## Why this tool
 
 Most "bulk delete" tools for X are paid SaaS dashboards that ask for your
 account credentials or an OAuth token and then act on your behalf from a
@@ -41,7 +64,7 @@ reads post IDs from the rendered timeline and clicks the existing on-screen
 controls. Your session cookie is reused, your data never leaves your
 machine, and there's nothing to pay for.
 
-## ✨ Features
+## Features
 
 - **Bulk unlike X.com posts** — walks `/likes` and unlikes each visible post
 - **Bulk delete X.com replies** — walks `/with_replies` and drives the
@@ -65,7 +88,7 @@ machine, and there's nothing to pay for.
 - **One-click navigation** — `→ /likes` and `→ /with_replies` links in the
   panel take you to the right tab automatically
 
-## 🚀 Quick start
+## Quick start
 
 Pick whichever install path matches your browser:
 
@@ -99,7 +122,7 @@ That is the whole flow. The script will scroll the timeline, unlike/delete
 each visible post one at a time, and stop when the timeline is exhausted
 (or when you hit Stop).
 
-## ⚠️ Safety
+## Safety
 
 This script **permanently deletes** engagement from your X.com account.
 There is no undo.
@@ -127,7 +150,7 @@ The script also does not handle the case where someone is logged in to
 multiple X accounts in the same browser — it operates on whichever
 account is currently signed in.
 
-## 🌐 Browser compatibility
+## Browser compatibility
 
 | Browser | Works? |
 |---------|--------|
@@ -140,7 +163,7 @@ account is currently signed in.
 | Brave (Tampermonkey) | ✅ |
 | Mobile browsers | ❌ — needs a desktop userscript manager or Chrome desktop |
 
-## 🔧 How it works
+## How it works
 
 Batchd ships as two install paths — a Tampermonkey userscript and a
 Chrome MV3 extension — both built from a single `src/` tree of ESM
@@ -149,6 +172,9 @@ modules concatenated by `scripts/build.js`. The userscript bundle
 (`dist/extension/`) is similar.
 
 The architecture is intentionally minimal:
+
+<details>
+<summary><strong>Show module-by-module breakdown</strong></summary>
 
 **Shared logic modules (used by both install paths):**
 
@@ -196,6 +222,10 @@ The architecture is intentionally minimal:
 - **`src/content.js`** — the Chrome extension entry. Wires the
   storage.chrome.js adapter, calls the same `bootstrapBatchd()`.
 
+</details>
+
+<br>
+
 The full v0.3.0 architecture (why one `src/` tree with two build
 targets) is captured in
 [ADR 0004](docs/adr/0004-chrome-extension-with-unified-source.md).
@@ -205,10 +235,13 @@ For a glossary of terms used throughout the codebase, see
 No network calls of any kind. The only cookies used are the ones your
 browser already has for x.com.
 
-## 🆚 Compare to alternatives
+## Compare to alternatives
 
 There are several other tools for cleaning up your X.com history. Here is
 how Batchd compares:
+
+<details>
+<summary><strong>Show full comparison table</strong></summary>
 
 | Tool | What it does | Account access | Open source | Cost | X.com likes | X.com replies |
 |------|--------------|----------------|-------------|------|-------------|---------------|
@@ -219,6 +252,10 @@ how Batchd compares:
 | [TweetEraser](https://www.tweeteraser.com/) | Bulk delete + unlike | OAuth | ❌ | Paid | ✅ | ❌ |
 | [Semiphemeral-likes](https://github.com/...) | Various open-source forks, mostly unmaintained | Varies | ✅ | Free | ✅ | ❌ |
 | X.com native "archive / delete" UI | One at a time, in the browser | N/A (manual) | N/A | Free | ❌ (no bulk) | ✅ (one at a time) |
+
+</details>
+
+<br>
 
 **Why Batchd is different:**
 
@@ -237,7 +274,7 @@ how Batchd compares:
 - **Open and free, forever.** No free tier that suddenly becomes paid,
   no acquisition risk, no shutdown risk.
 
-## 🚧 Limitations
+## Limitations
 
 - **Reposts and quote reposts are not supported.** X's "Undo repost" UI
   is unreliable and the prior Batchd implementation that handled them
@@ -253,7 +290,7 @@ how Batchd compares:
   may hit rate limits or captcha. The defaults are conservative; if you
   see captcha, stop, wait, and run again with default pacing.
 
-## 🛠️ Development
+## Development
 
 ```sh
 git clone https://github.com/11sid11/Batchd.git
@@ -278,7 +315,23 @@ storage adapters, the yield guard, and selector behavior.
 This is a personal-use tool. Contributions are welcome — open an issue
 first if you want to discuss a change larger than a small fix.
 
-## 📄 License
+## Stack
+
+<p>
+  <img src="https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white" alt="Node.js">
+  &nbsp;
+  <img src="https://img.shields.io/badge/ESM-Modules-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black" alt="ESM Modules">
+  &nbsp;
+  <img src="https://img.shields.io/badge/Chrome_MV3-4285F4?style=for-the-badge&logo=google-chrome&logoColor=white" alt="Chrome MV3">
+  &nbsp;
+  <img src="https://img.shields.io/badge/Tampermonkey-000000?style=for-the-badge&logo=tampermonkey&logoColor=white" alt="Tampermonkey">
+  &nbsp;
+  <img src="https://img.shields.io/badge/sharp-99CC00?style=for-the-badge&logo=sharp&logoColor=white" alt="sharp">
+  &nbsp;
+  <img src="https://img.shields.io/badge/MIT-License-blue?style=for-the-badge" alt="MIT License">
+</p>
+
+## License
 
 [MIT](LICENSE). Use it, fork it, ship it. Attribution appreciated but
 not required.
