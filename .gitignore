@@ -14,6 +14,9 @@ scripts/add-changelog.mjs
 scripts/check-occurrences.mjs
 scripts/fix-*.mjs
 
+# Release artifacts (built locally for Chrome Web Store upload)
+*.zip
+
 # Stray file from a 2026-06-30 PowerShell icon-generation mishap. The
 # file is owned by a different user than the workspace owner (likely
 # SYSTEM) and refuses to be deleted from this session even with
