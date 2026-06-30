@@ -248,7 +248,7 @@ function template() {
     </div>
     <div class="note">Likes and replies cleanup is best effort. X may hide or stall a few posts; refresh/rerun or remove leftovers manually.</div>
     <div class="log" data-log></div>
-    <div class="footer">Maintained by: <a href="https://github.com/11sid11/Batchd" target="_blank" rel="noopener noreferrer">11sid11/Batchd</a></div>
+    <div class="footer">Maintained by: <a href="https://x.com/sid_flac" target="_blank" rel="noopener noreferrer">@sid_flac</a></div>
   `;
 }
 
