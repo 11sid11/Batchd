@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="description" content="Batchd privacy policy — what data the extension touches and what it does not.">
+<title>Batchd — Privacy Policy</title>
+<style>
+  :root {
+    --c-primary: #1d9bf0;
+    --c-primary-dark: #0c7bbf;
+    --c-text: #1a1a1a;
+    --c-muted: #666;
+    --c-bg: #ffffff;
+    --c-card: #f7f9fb;
+    --c-border: #e1e8ed;
+    --c-accent: #bcd9ee;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --c-text: #e7e9ea;
+      --c-muted: #8b98a1;
+      --c-bg: #15202b;
+      --c-card: #1e2730;
+      --c-border: #2f3336;
+      --c-accent: #1c465e;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                 "Helvetica Neue", Arial, sans-serif;
+    max-width: 44rem;
+    margin: 0 auto;
+    padding: 2.5rem 1.25rem 4rem;
+    color: var(--c-text);
+    background: var(--c-bg);
+    line-height: 1.65;
+    font-size: 1.0625rem;
+  }
+  header {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--c-border);
+    margin-bottom: 2rem;
+  }
+  header .mark {
+    width: 56px;
+    height: 56px;
+    flex-shrink: 0;
+  }
+  header h1 {
+    margin: 0;
+    font-size: 1.5rem;
+    letter-spacing: -0.01em;
+  }
+  header .sub {
+    margin: 0.125rem 0 0;
+    color: var(--c-muted);
+    font-size: 0.875rem;
+  }
+  h2 {
+    margin-top: 2.25rem;
+    font-size: 1.125rem;
+    letter-spacing: -0.005em;
+    color: var(--c-text);
+  }
+  h2::before {
+    content: "";
+    display: block;
+    width: 2rem;
+    height: 3px;
+    background: linear-gradient(90deg, var(--c-primary), var(--c-primary-dark));
+    border-radius: 2px;
+    margin-bottom: 0.625rem;
+  }
+  p, li { margin: 0.625rem 0; }
+  ul { padding-left: 1.25rem; }
+  li { margin: 0.375rem 0; }
+  code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.875em;
+    background: var(--c-card);
+    border: 1px solid var(--c-border);
+    border-radius: 4px;
+    padding: 0.05em 0.35em;
+  }
+  a {
+    color: var(--c-primary);
+    text-decoration: none;
+  }
+  a:hover, a:focus { text-decoration: underline; }
+  .meta {
+    color: var(--c-muted);
+    font-size: 0.875rem;
+    margin: 0 0 1.25rem;
+  }
+  .callout {
+    background: var(--c-card);
+    border: 1px solid var(--c-border);
+    border-left: 3px solid var(--c-primary);
+    border-radius: 4px;
+    padding: 0.875rem 1rem;
+    margin: 1.25rem 0;
+    font-size: 0.9375rem;
+  }
+  footer {
+    margin-top: 3rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--c-border);
+    color: var(--c-muted);
+    font-size: 0.875rem;
+  }
+  footer a { color: var(--c-muted); }
+</style>
+</head>
+<body>
+  <header>
+    <svg class="mark" viewBox="0 0 200 200" role="img" aria-label="Batchd logo">
+      <defs>
+        <linearGradient id="g" x1="0" y1="0" x2="200" y2="200" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stop-color="#1d9bf0"/>
+          <stop offset="1" stop-color="#0c7bbf"/>
+        </linearGradient>
+      </defs>
+      <rect width="200" height="200" rx="40" fill="url(#g)"/>
+      <text x="100" y="148" text-anchor="middle"
+            font-family="-apple-system, system-ui, Segoe UI, Roboto, sans-serif"
+            font-weight="800" font-size="170" fill="white">B</text>
+      <g stroke="white" stroke-width="7" stroke-linecap="round" opacity="0.55" fill="none">
+        <line x1="158" y1="60" x2="182" y2="48"/>
+        <line x1="153" y1="100" x2="185" y2="100"/>
+        <line x1="158" y1="140" x2="182" y2="152"/>
+      </g>
+    </svg>
+    <div>
+      <h1>Batchd — Privacy Policy</h1>
+      <p class="sub">Chrome Web Store listing · version 0.3.0</p>
+    </div>
+  </header>
+
+  <p class="meta">Effective: 2026-07-01.</p>
+
+  <h2>What Batchd is</h2>
+  <p>Batchd is a free, open-source Chrome extension that helps you bulk-delete your own likes and replies on <code>x.com</code> and <code>twitter.com</code>. When you click <strong>Start</strong> in the floating panel, it clicks the existing delete buttons on your behalf so you don't have to do it one-by-one.</p>
+  <p>Source code, issue tracker, and release notes live at <a href="https://github.com/11sid11/Batchd">github.com/11sid11/Batchd</a>.</p>
+
+  <div class="callout">
+    <strong>Short version:</strong> Batchd does not collect, log, transmit, sell, or share any of your data. The extension runs entirely in your browser.
+  </div>
+
+  <h2>What data Batchd touches</h2>
+  <p>Batchd reads your currently-viewed page in memory only — to find the delete buttons for your likes and replies. The following Chrome Web Store data categories apply:</p>
+  <ul>
+    <li><strong>Website content</strong> — the DOM is read transiently to locate delete buttons. Nothing is copied out, stored long-term, or transmitted.</li>
+    <li><strong>User activity</strong> — clicks are dispatched at your explicit request when you press Start. No clicks happen without your action, and clicks stop the moment you press Stop or close the tab.</li>
+    <li><strong>Personal communications</strong> — your own replies on x.com are read in memory to find the delete button attached to each one. Nothing is copied out.</li>
+  </ul>
+
+  <h2>What Batchd does not do</h2>
+  <ul>
+    <li>It does not collect, log, or transmit any data off your device. There is no server, no analytics, no telemetry, no error reporter.</li>
+    <li>It does not embed or fetch any remote code, scripts, or fonts.</li>
+    <li>It does not request your X / Twitter password, session token, email, or any credential.</li>
+    <li>It does not sell, share, or transfer anything to any third party.</li>
+  </ul>
+
+  <h2>Local storage (chrome.storage.local)</h2>
+  <p>Batchd persists two pieces of in-progress state across tab refreshes — the current deletion count and the most-recent undo target — so that a refresh doesn't lose your session. This data:</p>
+  <ul>
+    <li>Stays on your device.</li>
+    <li>Is never read by anything except the running extension.</li>
+    <li>Is cleared automatically when you uninstall the extension.</li>
+  </ul>
+
+  <h2>Permissions, explained</h2>
+  <p>Batchd declares only what it needs:</p>
+  <ul>
+    <li><code>"storage"</code> — to save in-progress state in <code>chrome.storage.local</code>.</li>
+    <li><code>"content_scripts.matches"</code> = <code>*://x.com/*</code> and <code>*://twitter.com/*</code> — to inject the floating panel into the pages where it works. No <code>host_permissions</code> are requested.</li>
+  </ul>
+  <p>No service worker, no popup, no <code>web_accessible_resources</code>, no <code>externally_connectable</code>.</p>
+
+  <h2>Third parties</h2>
+  <p>None. Batchd makes no network requests of any kind.</p>
+
+  <h2>Children</h2>
+  <p>Batchd is not directed at children under 13 and does not knowingly process data from them.</p>
+
+  <h2>Changes to this policy</h2>
+  <p>This policy is updated at this URL as needed. Material changes appear in the project's <a href="https://github.com/11sid11/Batchd/releases">GitHub release notes</a> alongside the extension version that introduced them.</p>
+
+  <h2>Contact</h2>
+  <p>Open an issue at <a href="https://github.com/11sid11/Batchd/issues">github.com/11sid11/Batchd/issues</a>, or email the maintainer (linked from the GitHub profile).</p>
+
+  <footer>
+    <p>Maintained by <a href="https://github.com/11sid11/Batchd">github.com/11sid11/Batchd</a> · Open source under the project's published license.</p>
+  </footer>
+</body>
+</html>
