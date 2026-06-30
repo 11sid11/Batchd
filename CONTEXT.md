@@ -3,6 +3,12 @@
 Batchd is a Tampermonkey userscript that bulk-removes the user'"'"'s own X.com
 likes and replies. It is a personal-use tool, not a product.
 
+Batchd ships as two parallel artifacts from the same `src/` codebase:
+the Tampermonkey userscript and a Chrome Web Store extension. See
+[ADR 0004](./docs/adr/0004-chrome-extension-with-unified-source.md) for
+how the two relate, and the **Distribution** section below for the
+vocabulary.
+
 ## Scope
 
 **Likes and replies.** Batchd operates on engagement the current user has
@@ -58,6 +64,53 @@ auto-unticks the other. The panel shows the active mode in a small
 | **Delete sequence** | The three-click chain for replies: open more-menu → click "Delete" item → click confirm in the delete-post modal. |
 | **Migration** | A one-time state-shape upgrade that runs when the script reads persisted storage. v0.1.0 → v0.2.0 migrates the flat `pacing` object under `pacing.likes` and the flat `stats` object under `stats.likes`. Idempotent. |
 
+## Distribution
+
+**Platform**:
+The runtime environment for an install of Batchd. Currently one of two:
+`tampermonkey` (the userscript runs in Tampermonkey'"'"'s sandbox with the
+`GM_*` API) or `chrome-extension` (the content script runs in Chrome'"'"'s
+MV3 isolated world with the `chrome.*` API). The eight shared logic
+modules in
+`src/` are platform-agnostic; only the entry point and the storage
+adapter differ between platforms.
+_Avoid_: Runtime, environment, host
+
+**Install path**:
+How a user obtains Batchd. One of two: install the userscript in
+Tampermonkey, or install the Chrome extension from the Chrome Web Store.
+Both deliver the same behavior; they differ only in the install ceremony
+and the persistence backend.
+_Avoid_: Install method, distribution channel
+
+**Storage adapter**:
+A two-method `{ get(k), set(k, v) }` object that `src/persist.js`
+consumes. The adapter'"'"'s contract is platform-agnostic; its
+implementation is platform-specific — `src/storage.gm.js` wraps
+`GM_getValue` / `GM_setValue`, `src/storage.chrome.js` uses
+`chrome.storage.local` behind an in-memory cache. This seam is what
+lets the same `src/` serve both the Tampermonkey and Chrome-extension
+builds.
+_Avoid_: Storage wrapper, storage interface
+
+**Build artifact**:
+One of the two outputs of `npm run build`. The Tampermonkey artifact is
+`dist/batchd.user.js` (a single userscript bundle); the Chrome-extension
+artifact is `dist/extension/` (a loadable MV3 folder, zipped manually
+for the Chrome Web Store upload). Both artifacts share the same
+`package.json` version and the same `src/` modules.
+_Avoid_: Build output, build target
+
+**Yield check**:
+A two-line guard at the top of each entry point that prevents two
+Batchd installs (e.g., Tampermonkey script + Chrome extension) from
+running at the same time. The first install to mount sets
+`window.__batchd = { instance, store, panel }`; any later entry point
+sees the existing `instance` field, logs a one-time notice to the
+console, and exits without mounting a panel or run loop. The shared
+helper lives in `src/yield.js`.
+_Avoid_: Detect-and-yield, coexistence guard
+
 ## Configuration surface
 
 The user can toggle:
@@ -78,6 +131,7 @@ The user can toggle:
 | 0001 | Tampermonkey userscript (one shared userscript for both Likes and Replies), not Chrome extension or plain script | `docs/adr/0001-tampermonkey-userscript.md` |
 | 0002 | UI scrape, not X API (applies to both Likes tab and Replies tab) | `docs/adr/0002-ui-scrape-not-api.md` |
 | 0003 | Replies are a category peer of likes, sharing the same userscript with a per-category pacing preset | `docs/adr/0003-replies-as-mode.md` |
+| 0004 | Chrome extension alongside the Tampermonkey userscript — unified source via the `storage adapter` seam; `npm run build` emits both `dist/batchd.user.js` and `dist/extension/` from the same `package.json` version | `docs/adr/0004-chrome-extension-with-unified-source.md` |
 
 ### Operational
 
@@ -91,6 +145,12 @@ The user can toggle:
 - **Persist state on every Nth action, no explicit close-tab handlers** — crash-safe without `beforeunload` ceremony.
 - **Floating bottom-right control panel** — overlays without blocking the tab content you'"'"'re watching.
 - **Mutual exclusivity between Likes and Replies** — only one mode is active at a time, so the user is always explicit about which cleanup is running.
+- **Chrome extension reuses the same logic modules as the Tampermonkey userscript** — only the entry point (`src/content.js` vs `src/batchd.user.js`) and the storage adapter (`storage.chrome.js` vs `storage.gm.js`) differ.
+- **Chrome extension has no popup** — the toolbar icon is for show only; the floating panel injected by the content script is the only UI surface, matching the Tampermonkey install.
+- **Chrome extension manifest is MV3 with minimal surface** — `permissions: ["storage"]`, no `host_permissions` (no network calls), no `background` / service worker, no `web_accessible_resources`. `content_scripts.matches` is `*://x.com/*` + `*://twitter.com/*` with `run_at: "document_end"`. Icons (16/32/48/128) are committed PNGs generated once from `assets/logo.svg`.
+- **Chrome extension persists via `chrome.storage.local`** — a 10MB per-extension quota with no write throttle, plenty for Batchd'"'"'s ~10KB state. The `storage.chrome.js` adapter maintains an in-memory cache loaded on startup and writes-through to `chrome.storage.local` on every `set(k, v)` (fire-and-forget) to keep the synchronous `persist.js` interface.
+- **Yield check prevents two installs from running at the same time** — see the **Yield check** term above. The first to mount sets `window.__batchd.instance`; the second sees the marker and bails with a one-time console message.
+- **Chrome Web Store publish is manual for v0.3.0** — zip `dist/extension/` and upload via the Developer Dashboard. CI auto-upload via the Chrome Web Store API is deferred until after the first publish cycle lands and we have real review feedback to design around.
 
 ## Out of scope
 
@@ -102,3 +162,5 @@ The user can toggle:
 - Automated scheduling or triggers
 - Multi-account handling
 - Bulk delete of media attached to the user'"'"'s own posts (Delete deletes the post; media deletion is a separate X flow)
+- Other browsers via the Chrome extension — the Web Store only distributes to Chrome, Brave, Edge, Opera, Arc, and Vivaldi; Firefox, Safari, and mobile users continue to use the Tampermonkey userscript
+- State migration between the Tampermonkey userscript and the Chrome extension — if a user switches from one to the other, their cursor / processed set / stats start fresh. The yield check prevents simultaneous use, so this is a "use one or the other" UX, not a corruption risk. A future feature could write through to both stores for parity.
