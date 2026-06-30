@@ -145,7 +145,7 @@ The user can toggle:
 - **Persist state on every Nth action, no explicit close-tab handlers** — crash-safe without `beforeunload` ceremony.
 - **Floating bottom-right control panel** — overlays without blocking the tab content you'"'"'re watching.
 - **Mutual exclusivity between Likes and Replies** — only one mode is active at a time, so the user is always explicit about which cleanup is running.
-- **Chrome extension reuses the same logic modules as the Tampermonkey userscript** — only the entry point (`extension/content.js` vs `src/batchd.user.js`) and the storage adapter (`storage.chrome.js` vs `storage.gm.js`) differ.
+- **Chrome extension reuses the same logic modules as the Tampermonkey userscript** — only the entry point (`src/content.js` vs `src/batchd.user.js`) and the storage adapter (`storage.chrome.js` vs `storage.gm.js`) differ.
 - **Chrome extension has no popup** — the toolbar icon is for show only; the floating panel injected by the content script is the only UI surface, matching the Tampermonkey install.
 - **Chrome extension manifest is MV3 with minimal surface** — `permissions: ["storage"]`, no `host_permissions` (no network calls), no `background` / service worker, no `web_accessible_resources`. `content_scripts.matches` is `*://x.com/*` + `*://twitter.com/*` with `run_at: "document_end"`. Icons (16/32/48/128) are committed PNGs generated once from `assets/logo.svg`.
 - **Chrome extension persists via `chrome.storage.local`** — a 10MB per-extension quota with no write throttle, plenty for Batchd'"'"'s ~10KB state. The `storage.chrome.js` adapter maintains an in-memory cache loaded on startup and writes-through to `chrome.storage.local` on every `set(k, v)` (fire-and-forget) to keep the synchronous `persist.js` interface.
