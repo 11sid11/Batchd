@@ -1,29 +1,55 @@
-// Build script - concatenates src/*.js into a single distributable
-// userscript file at dist/batchd.user.js.
+// Build script - emits two artifacts from one source tree:
+//
+//   1. dist/batchd.user.js        - Tampermonkey userscript
+//   2. dist/extension/            - Chrome extension folder containing:
+//        content.js               - the bundled content script
+//        manifest.json            - copied from extension/manifest.json
+//        icons/icon-*.png         - copied from extension/icons/
 //
 // ESM `export` syntax is rewritten to global namespace assignments so the
-// concatenated file runs as a classic Tampermonkey script (no module loader).
-//
-// Order matters: modules are concatenated in dependency order, with the
-// entry point (batchd.user.js) last. Each module exposes its public
-// surface via globalThis.Batchd.
+// concatenated files run as classic scripts (no module loader). Each build
+// uses a different ORDER array: the seven logic modules (yield, pacing,
+// persist, failures, selectors, run, panel) are shared; the storage
+// adapter and entry point differ per target. See ADR 0004 in docs/adr/.
 
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-const ORDER = [
+const SHARED_MODULES = [
+  'yield.js',
   'pacing.js',
   'persist.js',
   'failures.js',
   'selectors.js',
   'run.js',
   'panel.js',
-  'batchd.user.js',     // entry point - last
 ];
 
-const OUT_DIR = 'dist';
-const OUT_FILE = `${OUT_DIR}/batchd.user.js`;
+export const TM_ENTRY = 'batchd.user.js';
+export const CHROME_ENTRY = 'content.js';
+
+// Both bundles share the seven logic modules, the matching storage
+// adapter, and `entry.js` (the `bootstrapBatchd` helper). Only the
+// last file in the order differs: `batchd.user.js` for Tampermonkey,
+// `content.js` for the Chrome extension. See ADR 0004 in docs/adr/.
+const TM_ORDER = [
+  'storage.gm.js',
+  'entry.js',
+  ...SHARED_MODULES,
+  TM_ENTRY,
+];
+
+const CHROME_ORDER = [
+  'storage.chrome.js',
+  'entry.js',
+  ...SHARED_MODULES,
+  CHROME_ENTRY,
+];
+
+function sourcePath(filename) {
+  return `src/${filename}`;
+}
 
 // Repo identity - hardcoded so forking the project is a deliberate edit
 // here, not a hunt through package.json. If Batchd ever moves, change
@@ -80,19 +106,11 @@ function rewriteEsm(src, filename) {
 
   let out = src;
 
-  // Hoist imports to a single Batchd-destructure
   out = out.replace(
     /^import\s*\{\s*([^}]+)\s*\}\s*from\s*['"][^'"]+['"];?\s*$/gm,
     (_, names) => `const { ${names.trim()} } = Batchd;`
   );
 
-  // export function NAME  /  export async function NAME
-  // Keep the function as a *local* declaration so that bare references inside
-  // the same file (e.g. `defaultState()` called from `readFromStorage`) keep
-  // resolving. Function declarations are hoisted, so they remain in scope
-  // regardless of source order. We then alias each exported function onto
-  // `Batchd` at the end of the chunk so external files can still reach it
-  // via the destructure pattern (`const { foo } = Batchd;`).
   const exportedFns = [];
   out = out.replace(/^export\s+(async\s+)?function\s+(\w+)/gm, (_, asyncKw, name) => {
     exportedFns.push(name);
@@ -103,22 +121,8 @@ function rewriteEsm(src, filename) {
     out += '\n' + exportedFns.map((n) => `Batchd.${n} = ${n};`).join('\n') + '\n';
   }
 
-  // Strip `export ` from `export const` lines so they stay as plain local
-  // `const` declarations in the bundle. Two reasons:
-  //   1. Classic-script context forbids the `export` keyword - Tampermonkey
-  //      loads the bundle as a classic script and would throw
-  //      "Unexpected token 'export'" on the literal token.
-  //   2. We want the constant to remain a local binding so the same file's
-  //      other functions can reference it bare (e.g. `STATE_KEY` inside
-  //      `createStore`). Rewriting to `Batchd.X = ...` would orphan those
-  //      references since the file has no `import` statement to inject a
-  //      destructure from Batchd.
-  // Node tests still import these via ESM (`import { X } from './foo.js'`)
-  // because the source files remain real ESM; only the bundled artifact
-  // treats them as locals.
   out = out.replace(/^export\s+const\s+/gm, 'const ');
 
-  // export { a, b, c };
   out = out.replace(/^export\s*\{\s*([^}]+)\s*\};?\s*$/gm, (_, list) =>
     list.split(',').map((s) => {
       const name = s.trim().split(/\s+as\s+/)[0];
@@ -126,24 +130,17 @@ function rewriteEsm(src, filename) {
     }).join('\n')
   );
 
-  // export default X
   out = out.replace(/^export\s+default\s+/gm, 'Batchd.default = ');
 
   return out;
 }
 
-async function build() {
-  const pkg = JSON.parse(await readFile('package.json', 'utf8'));
-  const banner = renderBanner(pkg);
-
+async function buildOne(order, banner, outFile) {
   const parts = [];
 
   // Outer IIFE - declares the shared `Batchd` namespace once. Each module is
   // then wrapped in its OWN inner IIFE so local bindings (function
   // declarations, `const` aliases) don't leak into other modules' scopes.
-  // Without the per-file IIFE, a `function findEngagedPosts()` declared in
-  // selectors.js would collide with `const { findEngagedPosts } = Batchd`
-  // declared in run.js - both would bind the same name at the outer scope.
   parts.push('// <auto-generated by scripts/build.js - do not edit>\n');
   parts.push('(function () {\n');
   parts.push('  "use strict";\n');
@@ -151,28 +148,69 @@ async function build() {
   parts.push('  const globalThis = window;\n');
   parts.push('  globalThis.Batchd = Batchd;\n\n');
 
-  for (const filename of ORDER) {
-    const src = await readFile(`src/${filename}`, 'utf8');
+  for (const filename of order) {
+    const src = await readFile(sourcePath(filename), 'utf8');
     const rewritten = rewriteEsm(src, filename);
 
-    // For the entry point: strip the @grant/@match header block - the build
-    // script writes its own header at the top of the bundle.
-    const cleaned = filename === 'batchd.user.js'
-      ? rewritten.replace(/^\/\/ ==UserScript==[\s\S]*?\/\/ ==\/UserScript==\s*/, '')
+    // For the Tampermonkey entry: strip the @grant/@match header block -
+    // the build script writes its own header at the top of the bundle.
+    // The Chrome entry point has no such block, so the regex is a no-op.
+    const cleaned = filename === TM_ENTRY
+      ? rewritten.replace(/^\/\/ ==UserScript==[\s\S]*?\/\/ ==\/UserScript==\s*/m, '')
       : rewritten;
 
-    parts.push(`  // ---- src/${filename} ----\n`);
+    parts.push(`  // ---- ${sourcePath(filename)} ----\n`);
     parts.push('  (function () {\n');
-    parts.push(cleaned.replace(/^/gm, '    '));   // indent one level deeper
+    parts.push(cleaned.replace(/^/gm, '    '));
     parts.push('\n  })();\n\n');
   }
 
   parts.push('})();\n');
 
-  if (!existsSync(OUT_DIR)) await mkdir(OUT_DIR, { recursive: true });
+  const outDir = outFile.substring(0, outFile.lastIndexOf('/'));
+  if (!existsSync(outDir)) await mkdir(outDir, { recursive: true });
   const out = banner + parts.join('');
-  await writeFile(OUT_FILE, out);
-  console.log(`built ${OUT_FILE} (${out.length} bytes)`);
+  await writeFile(outFile, out);
+  console.log(`built ${outFile} (${out.length} bytes)`);
+}
+
+async function buildUserscript() {
+  const pkg = JSON.parse(await readFile('package.json', 'utf8'));
+  await buildOne(TM_ORDER, renderBanner(pkg), 'dist/batchd.user.js');
+}
+
+async function buildExtension() {
+  // The Chrome content script has no banner - manifest.json supplies the
+  // metadata (name, version, description) to Chrome.
+  await buildOne(CHROME_ORDER, '', 'dist/extension/content.js');
+
+  // Copy the manifest and the four icon PNGs so the dist/extension/
+  // folder is a complete, loadable extension.
+  if (!existsSync('dist/extension/icons')) {
+    await mkdir('dist/extension/icons', { recursive: true });
+  }
+  const manifest = await readFile('extension/manifest.json', 'utf8');
+  await writeFile('dist/extension/manifest.json', manifest);
+  for (const size of [16, 32, 48, 128]) {
+    const bytes = await readFile(`extension/icons/icon-${size}.png`);
+    await writeFile(`dist/extension/icons/icon-${size}.png`, bytes);
+  }
+  console.log('copied manifest.json and icons/ to dist/extension/');
+}
+
+async function build(target) {
+  if (!target || target === 'all') {
+    await buildUserscript();
+    await buildExtension();
+  } else if (target === 'userscript') {
+    await buildUserscript();
+  } else if (target === 'extension') {
+    await buildExtension();
+  } else {
+    throw new Error(
+      `Unknown build target: ${target} (expected userscript, extension, or all)`,
+    );
+  }
 }
 
 // Only run the build when this file is the entry point (e.g.
@@ -181,14 +219,12 @@ async function build() {
 // without side effects.
 const isMain = process.argv[1] && (
   fileURLToPath(import.meta.url) === process.argv[1] ||
-  // Windows: the shell may canonicalize argv[1] differently (8.3 short
-  // paths, forward vs back slashes). Fall back to a suffix match.
   process.argv[1].endsWith('scripts/build.js') ||
   process.argv[1].endsWith('scripts\\build.js')
 );
 
 if (isMain) {
-  build().catch((err) => {
+  build(process.argv[2]).catch((err) => {
     console.error(err);
     process.exit(1);
   });
