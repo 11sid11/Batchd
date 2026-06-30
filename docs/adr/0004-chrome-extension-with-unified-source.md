@@ -22,13 +22,15 @@ Considered and rejected:
 
 Trade-off accepted: a small refactor (factor the existing `gmStorage()`
 factory out of `src/batchd.user.js` into a reusable `src/storage.gm.js`,
-add a parallel `src/storage.chrome.js`, and add a new `extension/` folder
-with `manifest.json` and a Chrome-specific `content.js` entry point) plus
-one new build target, in exchange for one shared codebase. None of the
-eight shared logic modules (`yield.js`, `pacing.js`, `persist.js`,
-`failures.js`, `selectors.js`, `run.js`, `panel.js`) change
-semantically; only `batchd.user.js` loses the inline `gmStorage()`
-factory and gains an import for `storage.gm.js`.
+add a parallel `src/storage.chrome.js`, and add a new `src/entry.js`
+plus a thin chrome entry `src/content.js`) plus one new build target,
+in exchange for one shared codebase. The chrome install keeps an
+`extension/` folder for `manifest.json` and `icons/` only -- no chrome
+source lives outside `src/`. None of the eight shared logic modules
+(`entry.js`, `yield.js`, `pacing.js`, `persist.js`, `failures.js`,
+`selectors.js`, `run.js`, `panel.js`) change semantically; only
+`batchd.user.js` loses the inline `gmStorage()` factory and gains an
+import for `storage.gm.js`.
 
 The Chrome Web Store publish step is manual for v0.3.0 (zip and drag
 `dist/extension/` into the Developer Dashboard) because the first
