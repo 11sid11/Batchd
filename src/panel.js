@@ -248,6 +248,7 @@ function template() {
     </div>
     <div class="note">Likes and replies cleanup is best effort. X may hide or stall a few posts; refresh/rerun or remove leftovers manually.</div>
     <div class="log" data-log></div>
+    <div class="footer">Maintained by: <a href="https://github.com/11sid11/Batchd" target="_blank" rel="noopener noreferrer">11sid11/Batchd</a></div>
   `;
 }
 
@@ -300,6 +301,9 @@ const PANEL_CSS = `
 #batchd-panel .stat .value { font-weight: 700; font-size: 14px; }
 #batchd-panel .note { color: #8b98a5; font-size: 11px; line-height: 1.3; margin: 0 0 8px; }
 #batchd-panel .log { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11px; background: #192734; border-radius: 6px; padding: 4px 6px; max-height: 120px; overflow-y: auto; color: #8b98a5; }
+#batchd-panel .footer { font-size: 10px; color: #6e7681; text-align: center; margin: 8px 0 0; padding-top: 8px; border-top: 1px solid #253341; }
+#batchd-panel .footer a { color: #8b98a5; text-decoration: none; }
+#batchd-panel .footer a:hover { color: #1d9bf0; text-decoration: underline; }
 `.trim();
 
 
