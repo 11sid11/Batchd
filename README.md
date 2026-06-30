@@ -35,7 +35,7 @@ entirely in your already-logged-in browser.
 If you want to clean up years of "hearted" posts, or wipe the replies you
 regretted, Batchd is the tool.
 
-## Contents
+## 📑 Contents
 
 - [Why this tool](#why-this-tool)
 - [Features](#features)
@@ -48,7 +48,7 @@ regretted, Batchd is the tool.
 - [Development](#development)
 - [License](#license)
 
-## Why this tool
+## 🧹 Why this tool
 
 Most "bulk delete" tools for X are paid SaaS dashboards that ask for your
 account credentials or an OAuth token and then act on your behalf from a
@@ -64,35 +64,35 @@ reads post IDs from the rendered timeline and clicks the existing on-screen
 controls. Your session cookie is reused, your data never leaves your
 machine, and there's nothing to pay for.
 
-## Features
+## ✨ Features
 
-- **Bulk unlike X.com posts** — walks `/likes` and unlikes each visible post
-- **Bulk delete X.com replies** — walks `/with_replies` and drives the
+- 💔 **Bulk unlike X.com posts** — walks `/likes` and unlikes each visible post
+- 🗑️ **Bulk delete X.com replies** — walks `/with_replies` and drives the
   more-menu → Delete → confirm sequence
-- **No API token, no OAuth, no credentials** — uses your existing browser
+- 🔐 **No API token, no OAuth, no credentials** — uses your existing browser
   session
-- **No data leaves your machine** — no server, no upload, no telemetry
-- **Open source (MIT)** — read the code, fork it, run it on your own data
+- 🛡️ **No data leaves your machine** — no server, no upload, no telemetry
+- 📖 **Open source (MIT)** — read the code, fork it, run it on your own data
   without trusting anyone
-- **Pacing controls** — adjustable base delay, jitter, batch pause, and
+- ⏱️ **Pacing controls** — adjustable base delay, jitter, batch pause, and
   exponential backoff to stay under X's anti-abuse radar
-- **Dry-run mode** — walks the timeline and logs what it *would* click
+- 🧪 **Dry-run mode** — walks the timeline and logs what it *would* click
   without actually clicking, so you can verify it sees the right posts
-- **Resumable** — the script remembers which posts it has already processed
+- 🔄 **Resumable** — the script remembers which posts it has already processed
   and skips them on subsequent runs
-- **Per-category pacing** — likes are faster (1200ms base) because unliking
+- ⚖️ **Per-category pacing** — likes are faster (1200ms base) because unliking
   is cheap; replies are slower (3000ms base) because delete is destructive
   and X treats it more strictly
-- **Stopwatch** — see how long the run has been going
-- **Stop button** — abort mid-run without losing progress
-- **One-click navigation** — `→ /likes` and `→ /with_replies` links in the
+- ⏲️ **Stopwatch** — see how long the run has been going
+- ⏹️ **Stop button** — abort mid-run without losing progress
+- 🧭 **One-click navigation** — `→ /likes` and `→ /with_replies` links in the
   panel take you to the right tab automatically
 
-## Quick start
+## 🚀 Quick start
 
 Pick whichever install path matches your browser:
 
-**Option A — Chrome Web Store extension (v0.3.0+, recommended on Chrome):**
+**Option A — 🌐 Chrome Web Store extension (v0.3.0+, recommended on Chrome):**
 
 1. Open the [Batchd Chrome Web Store listing](#) and click **Add to
    Chrome**. *(Link goes live once the v0.3.0 submission is approved by
@@ -104,7 +104,7 @@ Pick whichever install path matches your browser:
    right tab via the `→ /likes` or `→ /with_replies` link, type `DELETE`
    to confirm, and click **Go**.
 
-**Option B — Tampermonkey (Firefox, Safari, Edge, or any other browser):**
+**Option B — 🐵 Tampermonkey (Firefox, Safari, Edge, or any other browser):**
 
 1. **Install Tampermonkey** in your browser:
    [Chrome](https://chrome.google.com/webstore/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo),
@@ -122,10 +122,10 @@ That is the whole flow. The script will scroll the timeline, unlike/delete
 each visible post one at a time, and stop when the timeline is exhausted
 (or when you hit Stop).
 
-## Safety
+## ⚠️ Safety
 
-This script **permanently deletes** engagement from your X.com account.
-There is no undo.
+> ⚠️ **This script permanently deletes engagement from your X.com
+> account. There is no undo.**
 
 - **Likes** are recoverable (you can re-like a post later if you find it
   in your history, though the script does not track which posts it
@@ -150,7 +150,7 @@ The script also does not handle the case where someone is logged in to
 multiple X accounts in the same browser — it operates on whichever
 account is currently signed in.
 
-## Browser compatibility
+## 🌐 Browser compatibility
 
 | Browser | Works? |
 |---------|--------|
@@ -163,7 +163,7 @@ account is currently signed in.
 | Brave (Tampermonkey) | ✅ |
 | Mobile browsers | ❌ — needs a desktop userscript manager or Chrome desktop |
 
-## How it works
+## 🔧 How it works
 
 Batchd ships as two install paths — a Tampermonkey userscript and a
 Chrome MV3 extension — both built from a single `src/` tree of ESM
@@ -235,7 +235,7 @@ For a glossary of terms used throughout the codebase, see
 No network calls of any kind. The only cookies used are the ones your
 browser already has for x.com.
 
-## Compare to alternatives
+## 🆚 Compare to alternatives
 
 There are several other tools for cleaning up your X.com history. Here is
 how Batchd compares:
@@ -259,22 +259,22 @@ how Batchd compares:
 
 **Why Batchd is different:**
 
-- **No credentials, no server.** Nothing leaves your machine. The paid
+- 🔒 **No credentials, no server.** Nothing leaves your machine. The paid
   SaaS tools all require you to grant OAuth access, which means your
   tweets, DMs, and account metadata are processed on their servers
   (read their privacy policies).
-- **Open source.** You can read the full code, audit it, fork it,
+- 👁️ **Open source.** You can read the full code, audit it, fork it,
   modify it for your own needs, and contribute back.
-- **Likes *and* replies.** Most tools only handle one. Batchd handles
+- 💬❤️ **Likes *and* replies.** Most tools only handle one. Batchd handles
   both, with a different pacing profile per category because deleting
   a reply is more sensitive than unliking a post.
-- **Resumable.** If you close the tab or hit Stop, the script remembers
+- 💾 **Resumable.** If you close the tab or hit Stop, the script remembers
   which posts it has already processed and resumes from the saved
   cursor on the next run.
-- **Open and free, forever.** No free tier that suddenly becomes paid,
+- 🌍 **Open and free, forever.** No free tier that suddenly becomes paid,
   no acquisition risk, no shutdown risk.
 
-## Limitations
+## 🚧 Limitations
 
 - **Reposts and quote reposts are not supported.** X's "Undo repost" UI
   is unreliable and the prior Batchd implementation that handled them
@@ -290,7 +290,7 @@ how Batchd compares:
   may hit rate limits or captcha. The defaults are conservative; if you
   see captcha, stop, wait, and run again with default pacing.
 
-## Development
+## 🛠️ Development
 
 ```sh
 git clone https://github.com/11sid11/Batchd.git
@@ -315,7 +315,7 @@ storage adapters, the yield guard, and selector behavior.
 This is a personal-use tool. Contributions are welcome — open an issue
 first if you want to discuss a change larger than a small fix.
 
-## Stack
+## 🏗️ Stack
 
 <p>
   <img src="https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white" alt="Node.js">
@@ -331,7 +331,7 @@ first if you want to discuss a change larger than a small fix.
   <img src="https://img.shields.io/badge/MIT-License-blue?style=for-the-badge" alt="MIT License">
 </p>
 
-## License
+## 📄 License
 
 [MIT](LICENSE). Use it, fork it, ship it. Attribution appreciated but
 not required.
