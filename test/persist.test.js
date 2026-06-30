@@ -120,7 +120,7 @@ test('reset clears all state back to defaults', () => {
   s1.reset();
   const s2 = createStore(storage);
   assert.equal(s2.processedSize(), 0);
-  assert.equal(s2.loadState().stats.success, 0);
+  assert.equal(s2.loadState().stats.likes.success, 0);
   assert.deepEqual(s2.loadState().failures, {});
 });
 
@@ -263,8 +263,10 @@ test('migrates the v0.1.0 flat-pacing shape under pacing.likes', () => {
   assert.equal(state.config.deleteReplies, false);
   // Processed set preserved.
   assert.deepEqual(state.processed, ['1', '2']);
-  // Stats and failures preserved.
-  assert.equal(state.stats.success, 5);
+  // Stats and failures preserved. v0.1.0 flat stats are re-parented
+  // under stats.likes; reply stats are zero-initialized by the migration.
+  assert.equal(state.stats.likes.success, 5);
+  assert.equal(state.stats.replies.success, 0);
   assert.equal(state.failures['2'], 'rate_limited');
 });
 
