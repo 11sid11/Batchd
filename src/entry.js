@@ -52,6 +52,15 @@ export function bootstrapBatchd({ instanceName, storage }) {
   // (returned by runCategory when we had to switch tabs) bubbles up so
   // the panel can stop the session — the user reloads and clicks Go
   // again to resume from the saved cursor.
+  //
+  // STOP_STATUSES collects the runCategory outcomes that should
+  // short-circuit the whole session. Adding a new terminal status
+  // here is a one-line edit; the if-chain this replaces grew by hand
+  // each time a new status was invented and was easy to drift out of
+  // sync between the chrome and TM entry points (both delegate here
+  // today, but the brief asks for a single source of truth).
+  const STOP_STATUSES = new Set(['navigated', 'blocked', 'aborted']);
+
   async function runSequential({ signal, onProgress }) {
     const categories = activeCategories();
     if (categories.length === 0) {
@@ -68,12 +77,10 @@ export function bootstrapBatchd({ instanceName, storage }) {
         onProgress,
         log: panel.appendLog,
       });
-      if (result.status === 'navigated') {
-        // We just changed tabs; the page will reload, so stop here.
-        // The user clicks Go again on the new tab to continue.
-        return result;
-      }
-      if (result.status === 'blocked' || result.status === 'aborted') {
+      if (STOP_STATUSES.has(result.status)) {
+        // Navigated: we just changed tabs; the page will reload, so stop
+        // here. Blocked/aborted: a non-recoverable failure. In all three
+        // cases the user clicks Go again to resume from the saved cursor.
         return result;
       }
     }

@@ -26,6 +26,11 @@ const SHARED_MODULES = [
   'panel.js',
 ];
 
+// `safeCall.js` is imported by both storage adapters, so it must be
+// concatenated before them in either bundle. It lives outside the
+// "shared logic" set because it's plumbing, not a feature module.
+const SAFE_CALL = 'safeCall.js';
+
 export const TM_ENTRY = 'batchd.user.js';
 export const CHROME_ENTRY = 'content.js';
 
@@ -46,6 +51,7 @@ export function stripTmBanner(src) {
 // last file in the order differs: `batchd.user.js` for Tampermonkey,
 // `content.js` for the Chrome extension. See ADR 0004 in docs/adr/.
 const TM_ORDER = [
+  SAFE_CALL,
   'storage.gm.js',
   'entry.js',
   ...SHARED_MODULES,
@@ -53,6 +59,7 @@ const TM_ORDER = [
 ];
 
 const CHROME_ORDER = [
+  SAFE_CALL,
   'storage.chrome.js',
   'entry.js',
   ...SHARED_MODULES,
@@ -195,6 +202,24 @@ async function buildExtension() {
   // The Chrome content script has no banner - manifest.json supplies the
   // metadata (name, version, description) to Chrome.
   await buildOne(CHROME_ORDER, '', 'dist/extension/content.js');
+
+  // Post-build sanity check: the chrome bundle must reference both
+  // the async loader (`loadChromeStorage`) and the sync adapter
+  // (`chromeStorage`). If a future refactor drops one — say, by
+  // renaming it without updating `src/content.js`, or by trimming the
+  // CHROME_ORDER array — the chrome extension would silently mount
+  // against an empty cache. Throwing here surfaces the mistake at
+  // build time rather than at runtime in a user's session.
+  const chromeBundle = await readFile('dist/extension/content.js', 'utf8');
+  for (const required of ['loadChromeStorage', 'chromeStorage']) {
+    if (!chromeBundle.includes(required)) {
+      throw new Error(
+        `chrome bundle missing required symbol "${required}" — ` +
+        `check CHROME_ORDER in scripts/build.js and the chrome entry ` +
+        `point's imports in src/content.js.`
+      );
+    }
+  }
 
   // Copy the manifest and the four icon PNGs so the dist/extension/
   // folder is a complete, loadable extension.
