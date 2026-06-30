@@ -5,6 +5,40 @@ All notable changes to Batchd are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] - 2026-06-30
+
+### Added
+- **Tampermonkey auto-update** - the userscript header now includes
+  `@updateURL` and `@downloadURL`, both pointing at the GitHub release
+  `latest` download URL. Existing installs auto-update when a new
+  release is cut; new installs can fetch the script from any release.
+  Strategy B: rely on the release asset rather than committing the
+  built `dist/batchd.user.js` to the repo (see README "Quick start").
+- **Banner polish fields** - `@author 11sid11`, `@license MIT`,
+  `@homepage`, `@supportURL`, and `@icon` (pointing at `assets/logo.svg`
+  on the master branch). Tampermonkey dashboards now show Batchd with
+  a proper icon and a link to the issue tracker.
+- **`test/build.test.js`** - 7 cases covering the new banner fields,
+  the preserved original fields, and the defensive minimal-pkg case.
+
+### Changed
+- **Banner construction extracted** - `scripts/build.js` now exports a
+  pure `renderBanner(pkg)` function. The auto-build call is guarded so
+  importing the module from a test does not trigger a build.
+- **`@version` reads from `package.json`** - bumping the script version
+  is now a one-file edit (`package.json`) followed by `npm run build`.
+  The banner in `scripts/build.js` no longer needs a separate bump.
+
+### Fixed
+- **Stale tests from the v0.1.0 -> v0.2.0 refactor** - several tests
+  referenced the pre-v0.2.0 flat `stats` shape and the old
+  `buttonFound/responseOk/buttonStillThere` `clickUndo` outcome. The
+  production code was updated in v0.2.0 to use per-category stats and
+  to collapse successful outcomes to `{ success: true }`, but the tests
+  were left behind. Updated to the new shapes; suite is 89/89 green.
+
+[0.2.1]: https://github.com/11sid11/Batchd/releases/tag/v0.2.1
+
 ## [0.2.0] - 2026-06-30
 
 ### Added
@@ -99,4 +133,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   reasoning.
 
 [0.2.0]: https://github.com/11sid11/Batchd/releases/tag/v0.2.0
+[0.2.1]: https://github.com/11sid11/Batchd/releases/tag/v0.2.1
 [0.1.0]: https://github.com/11sid11/Batchd/releases/tag/v0.1.0
