@@ -67,6 +67,22 @@ machine, and there's nothing to pay for.
 
 ## 🚀 Quick start
 
+Pick whichever install path matches your browser:
+
+**Option A — Chrome Web Store extension (v0.3.0+, recommended on Chrome):**
+
+1. Open the [Batchd Chrome Web Store listing](#) and click **Add to
+   Chrome**. *(Link goes live once the v0.3.0 submission is approved by
+   the Chrome Web Store review team.)*
+2. Go to x.com in a regular tab (logged in to the account whose
+   likes/replies you want to delete).
+3. A small panel appears in the bottom-right corner of every x.com page.
+   Tick the mode you want (**Likes** is on by default), navigate to the
+   right tab via the `→ /likes` or `→ /with_replies` link, type `DELETE`
+   to confirm, and click **Go**.
+
+**Option B — Tampermonkey (Firefox, Safari, Edge, or any other browser):**
+
 1. **Install Tampermonkey** in your browser:
    [Chrome](https://chrome.google.com/webstore/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo),
    [Firefox](https://addons.mozilla.org/en-US/firefox/addon/tampermonkey/),
@@ -76,12 +92,8 @@ machine, and there's nothing to pay for.
 2. **Install the script**: open `dist/batchd.user.js` from this repo, or
    drag-and-drop it into a browser tab. Tampermonkey will prompt to
    install. Approve.
-3. **Go to x.com** in a regular tab (you must be logged in to the account
-   whose likes/replies you want to delete).
-4. **A small panel appears in the bottom-right corner** of every x.com
-   page. Tick the mode you want (**Likes** is on by default), navigate to
-   the right tab via the `→ /likes` or `→ /with_replies` link, type
-   `DELETE` to confirm, and click **Go**.
+3. Go to x.com (same logged-in-account requirement as Option A).
+4. Same panel appears; same `DELETE` → **Go** flow.
 
 That is the whole flow. The script will scroll the timeline, unlike/delete
 each visible post one at a time, and stop when the timeline is exhausted
@@ -119,21 +131,26 @@ account is currently signed in.
 
 | Browser | Works? |
 |---------|--------|
+| Chrome (extension — v0.3.0+) | ✅ — preferred Chrome install path |
 | Chrome (Tampermonkey) | ✅ |
 | Firefox (Tampermonkey or Violentmonkey) | ✅ |
 | Edge (Tampermonkey) | ✅ |
 | Safari (Tampermonkey) | ✅ |
 | Opera (Tampermonkey) | ✅ |
 | Brave (Tampermonkey) | ✅ |
-| Mobile browsers | ❌ — userscripts need a desktop userscript manager |
+| Mobile browsers | ❌ — needs a desktop userscript manager or Chrome desktop |
 
 ## 🔧 How it works
 
-Batchd is a single Tampermonkey userscript built from a small set of
-ESM modules and concatenated by `scripts/build.js` into a distributable
-`dist/batchd.user.js`. The whole bundle is around 78KB.
+Batchd ships as two install paths — a Tampermonkey userscript and a
+Chrome MV3 extension — both built from a single `src/` tree of ESM
+modules concatenated by `scripts/build.js`. The userscript bundle
+(`dist/batchd.user.js`) is around 78KB; the Chrome bundle
+(`dist/extension/`) is similar.
 
 The architecture is intentionally minimal:
+
+**Shared logic modules (used by both install paths):**
 
 - **`src/selectors.js`** — the only module that touches the X.com DOM.
   Three-signal fallback chains (X rotates testid attributes between
@@ -152,17 +169,41 @@ The architecture is intentionally minimal:
   `network`, `rate_limited`, `captcha`, `unknown`, `stale`.
 - **`src/pacing.js`** — pure functions for delay, batch pause, and
   exponential backoff.
+- **`src/yield.js`** — coexistence guard. If a user has both the
+  Tampermonkey userscript and the Chrome extension installed, the
+  first to mount claims `window.__batchd` and the second bails with a
+  one-time console message.
+- **`src/entry.js`** — the shared bootstrap. `bootstrapBatchd()`
+  wires the modules together so the chrome and tampermonkey entry
+  points stay thin.
+- **`src/safeCall.js`** — small helper for swallowing exceptions from
+  optional DOM/storage calls.
 - **`src/panel.js`** — the floating bottom-right control panel.
-- **`src/batchd.user.js`** — the entry point. Wires the modules together
-  and is the file the build script processes into the final bundle.
 
-The script uses `GM_getValue` / `GM_setValue` (provided by Tampermonkey)
-to persist state to local storage. No network calls of any kind. The only
-cookies used are the ones your browser already has for x.com.
+**Storage adapters (one per install path):**
 
-For a deeper design rationale, see the [architecture decision records](docs/adr/).
+- **`src/storage.gm.js`** — wraps `GM_getValue` / `GM_setValue` /
+  `GM_deleteValue` for Tampermonkey. Returns a `get` / `set` / `del`
+  factory consumed by `src/batchd.user.js`.
+- **`src/storage.chrome.js`** — wraps `chrome.storage.local` for the
+  Chrome extension. Returns the same shape. Falls back gracefully when
+  the chrome runtime reports `lastError`.
+
+**Entry points:**
+
+- **`src/batchd.user.js`** — the Tampermonkey entry. Wires the
+  storage.gm.js adapter, calls `bootstrapBatchd()`.
+- **`src/content.js`** — the Chrome extension entry. Wires the
+  storage.chrome.js adapter, calls the same `bootstrapBatchd()`.
+
+The full v0.3.0 architecture (why one `src/` tree with two build
+targets) is captured in
+[ADR 0004](docs/adr/0004-chrome-extension-with-unified-source.md).
 For a glossary of terms used throughout the codebase, see
 [`CONTEXT.md`](CONTEXT.md).
+
+No network calls of any kind. The only cookies used are the ones your
+browser already has for x.com.
 
 ## 🆚 Compare to alternatives
 
@@ -218,17 +259,21 @@ how Batchd compares:
 git clone https://github.com/11sid11/Batchd.git
 cd Batchd
 npm install
-npm test          # runs the unit test suite
-npm run build     # concatenates src/*.js into dist/batchd.user.js
+npm test                   # runs the unit test suite (118 tests)
+npm run build              # builds both artifacts: userscript + extension
+npm run build:userscript   # dist/batchd.user.js only
+npm run build:extension    # dist/extension/ only (manifest + content.js + icons/)
+npm run icons              # regenerates extension/icons/*.png from assets/logo.svg
 ```
 
-The build output (`dist/batchd.user.js`) is the file you load into
-Tampermonkey. The `src/` files are ESM modules and not directly runnable.
+The build output for Tampermonkey is `dist/batchd.user.js`; for the
+Chrome extension it's `dist/extension/`. Both are emitted from the same
+`src/` tree. The `src/` files are ESM modules and not directly runnable.
 
 Tests use `node --test` against the source modules with mocked DOM
 (`src/selectors.js` is the main DOM-touching file; the others are pure
 logic). 118 test cases cover pacing, persistence, the run loop, the
-storage adapters, and selector behavior.
+storage adapters, the yield guard, and selector behavior.
 
 This is a personal-use tool. Contributions are welcome — open an issue
 first if you want to discuss a change larger than a small fix.
