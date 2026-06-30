@@ -119,6 +119,23 @@ test("loadChromeStorage resolves to {} when chrome.runtime.lastError is set", as
   delete globalThis.chrome;
 });
 
+test("loadChromeStorage resolves to {} when chrome.storage.local.get throws synchronously", async (t) => {
+  const mockWarn = t.mock.method(console, "warn");
+  const m = makeChrome();
+  m.install();
+  // Force the synchronous body of chrome.storage.local.get to throw —
+  // simulates an invalidated extension context where the API surface
+  // exists but the backend call rejects before invoking the callback.
+  globalThis.chrome.storage.local.get = () => {
+    throw new Error("Extension context invalidated");
+  };
+  const result = await loadChromeStorage();
+  assert.deepEqual(result, {});
+  // The catch branch is silent by design — graceful degradation, no warn.
+  assert.equal(mockWarn.mock.callCount(), 0);
+  delete globalThis.chrome;
+});
+
 test("chromeStorage.set logs an error when chrome.runtime.lastError is set", (t) => {
   const mockError = t.mock.method(console, "error");
   const m = makeChrome();
