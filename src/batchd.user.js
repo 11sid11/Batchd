@@ -1,12 +1,16 @@
 // Batchd — Tampermonkey entry point.
 //
 // Wires the modules together:
-//   - createStore backed by GM_getValue / GM_setValue
+//   - gmStorage adapter for the persistence layer (src/storage.gm.js)
 //   - mountPanel for the floating UI
 //   - runCategory from run.js, called for Likes and/or Replies cleanup
 //
 // This file is the entry point. The build script (scripts/build.js) copies
 // the other src/*.js files into this one as a single distributable.
+//
+// The Chrome extension has a parallel entry point at extension/content.js
+// that uses the chromeStorage adapter (src/storage.chrome.js) instead of
+// gmStorage. See ADR 0004 in docs/adr/.
 
 // ==UserScript==
 // @name         Batchd
@@ -20,23 +24,18 @@
 // @run-at       document-end
 // ==/UserScript==
 
-  // ---- Storage adapter for the persistence layer ----------------------------
-  function gmStorage() {
-    return {
-      get: (k) => {
-        try { return GM_getValue(k); } catch { return undefined; }
-      },
-      set: (k, v) => {
-        try { GM_setValue(k, v); } catch { /* quota or disabled */ }
-      },
-    };
-  }
-
   // ---- Destructure dependencies from the Batchd namespace ---------------
   // The build script (scripts/build.js) writes each module's exports as
   // `Batchd.X = ...`, so we destructure them here. Without this, bare
   // calls like `createStore(...)` would throw ReferenceError at runtime.
-  const { createStore, mountPanel, runCategory } = Batchd;
+  const { createStore, mountPanel, runCategory, gmStorage, checkAndYield } = Batchd;
+
+  // ---- Yield check ---------------------------------------------------------
+  // If a second Batchd instance (the Chrome extension on a user who
+  // installed both) is already running on this window, log a one-time
+  // notice and bail before touching anything. This is the cheap
+  // detect-and-yield pattern from CONTEXT.md (term: "Yield check").
+  if (checkAndYield('tampermonkey')) return;
 
   // ---- Username discovery ----------------------------------------------------
   // We pull the username out of the URL so the run loop can navigate to the
@@ -104,4 +103,4 @@
 
   // Expose for debugging from the console
   // (Tampermonkey isolates the script; this attaches to window for inspection)
-  window.__batchd = { store: panelStore, panel };
+  window.__batchd = { instance: 'tampermonkey', store: panelStore, panel };

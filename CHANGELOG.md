@@ -5,6 +5,56 @@ All notable changes to Batchd are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-06-30
+
+### Added
+- **Chrome Web Store extension (MV3)** - one-click install for users who
+  prefer not to set up Tampermonkey. Same behavior as the userscript;
+  same floating panel, same selectors, same pacing. The extension is
+  built from the same `src/` as the userscript via a thin `storage
+  adapter` seam (`src/storage.gm.js` for Tampermonkey,
+  `src/storage.chrome.js` for Chrome). One code path, two install
+  paths. See `docs/adr/0004-chrome-extension-with-unified-source.md`
+  for the full rationale.
+- **`npm run build:userscript`** and **`npm run build:extension`** -
+  granular build targets. `npm run build` (no argument) builds both.
+- **Detect-and-yield coexistence guard** - if a user has both the
+  Tampermonkey userscript and the Chrome extension installed, the
+  first to mount sets `window.__batchd = { instance, store, panel }`;
+  the second sees the marker and bails with a one-time console
+  message. Implemented in `src/yield.js`.
+- **22 new tests** (108+2=110 total). `src/storage.gm.js` (6),
+  `src/storage.chrome.js` (8), `src/yield.js` (5), and a
+  regression-guard for the `==UserScript==`-strip regex in the
+  build script (2). All green.
+
+### Changed
+- **`scripts/build.js` now emits two artifacts** - `dist/batchd.user.js`
+  (Tampermonkey) and `dist/extension/` (Chrome MV3 folder with
+  `content.js`, `manifest.json`, and `icons/`). Both share the seven
+  logic modules (`yield`, `pacing`, `persist`, `failures`, `selectors`,
+  `run`, `panel`); only the storage adapter and the entry point
+  differ.
+- **`src/batchd.user.js` no longer contains the inline `gmStorage`
+  factory** - it now `import`s the function from `src/storage.gm.js`.
+  Same behavior, one line of glue code.
+- **Build regex bug fix** - the strip regex that removes the
+  `==UserScript==` block from the Tampermonkey entry source was
+  missing the `m` flag, so the block was leaking into the bundle ~3KB
+  deep with a stale `@version 0.2.0`. Fixed; regression-tested.
+
+### Installation
+
+- **Tampermonkey (unchanged):** the userscript bundle is
+  `dist/batchd.user.js`. Existing installs auto-update via the
+  existing `@updateURL`.
+- **Chrome extension (new):** `dist/extension/` is the loadable
+  extension folder. To publish: zip it, open the [Chrome Web Store
+  Developer Dashboard](https://chrome.google.com/webstore/devconsole/),
+  upload, fill in the listing, submit. First review is 1-2 weeks.
+
+[0.3.0]: https://github.com/11sid11/Batchd/releases/tag/v0.3.0
+
 ## [0.2.2] - 2026-06-30
 
 ### Added

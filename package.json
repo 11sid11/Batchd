@@ -1,8 +1,8 @@
 {
   "name": "batchd",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "private": true,
-  "description": "Tampermonkey userscript that bulk-deletes a user's own X.com likes and replies.",
+  "description": "Bulk-delete your X.com likes and replies. Ships as a Tampermonkey userscript and a Chrome Web Store extension from one source tree.",
   "type": "module",
   "scripts": {
     "test": "node --test test/*.test.js",
@@ -11,7 +11,9 @@
     "test:failures": "node --test test/failures.test.js",
     "test:run": "node --test test/run.test.js",
     "test:selectors": "node --test test/selectors.test.js",
-    "build": "node scripts/build.js"
+    "build": "node scripts/build.js",
+    "build:userscript": "node scripts/build.js userscript",
+    "build:extension": "node scripts/build.js extension"
   },
   "engines": {
     "node": ">=18"

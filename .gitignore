@@ -3,3 +3,11 @@ dist/
 handoff/
 *.log
 .DS_Store
+
+# Stray file from a 2026-06-30 PowerShell icon-generation mishap. The
+# file is owned by a different user than the workspace owner (likely
+# SYSTEM) and refuses to be deleted from this session even with
+# `takeown /F`. It is a 193-byte corrupted PNG, not referenced by any
+# build, and does not affect any artifact. Safe to delete with admin
+# tools (handle.exe + close handle, or system restart).
+System.Drawing.Drawing2D.GraphicsPath
