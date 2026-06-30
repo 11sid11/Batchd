@@ -29,6 +29,18 @@ const SHARED_MODULES = [
 export const TM_ENTRY = 'batchd.user.js';
 export const CHROME_ENTRY = 'content.js';
 
+// Regex used by `buildOne` (and by tests) to strip the ==UserScript==
+// metadata block from the Tampermonkey entry source so it is not
+// duplicated in the bundle. The `m` flag lets `^` match the start of
+// each line after `rewriteEsm` indents the source. Exported so the
+// build-strip tests can run the strip in isolation against arbitrary
+// rewritten source.
+export const TM_BANNER_STRIP = /^\/\/ ==UserScript==[\s\S]*?\/\/ ==\/UserScript==\s*/m;
+
+export function stripTmBanner(src) {
+  return src.replace(TM_BANNER_STRIP, '');
+}
+
 // Both bundles share the seven logic modules, the matching storage
 // adapter, and `entry.js` (the `bootstrapBatchd` helper). Only the
 // last file in the order differs: `batchd.user.js` for Tampermonkey,
@@ -97,7 +109,7 @@ export function renderBanner(pkg) {
 `;
 }
 
-function rewriteEsm(src, filename) {
+export function rewriteEsm(src, filename) {
   // 1. `export function NAME(...)` -> `function NAME(...)` plus `Batchd.NAME = NAME`
   // 2. `export const NAME = ...`  -> `const NAME = ...`
   // 3. `import { X, Y } from './foo.js'` -> `const { X, Y } = Batchd;`
@@ -156,7 +168,7 @@ async function buildOne(order, banner, outFile) {
     // the build script writes its own header at the top of the bundle.
     // The Chrome entry point has no such block, so the regex is a no-op.
     const cleaned = filename === TM_ENTRY
-      ? rewritten.replace(/^\/\/ ==UserScript==[\s\S]*?\/\/ ==\/UserScript==\s*/m, '')
+      ? stripTmBanner(rewritten)
       : rewritten;
 
     parts.push(`  // ---- ${sourcePath(filename)} ----\n`);
