@@ -5,6 +5,13 @@ All notable changes to Batchd are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.3] - 2026-07-01
+
+### Changed
+- **Enlarged panel footer.** Footer font 10px → 12px, links now bold,
+  muted body color, more breathing room (taller padding + line-height).
+  The Buy Me A Chai and Solana tip jar links are easier to tap.
+
 ## [0.3.2] - 2026-07-01
 
 ### Added
@@ -72,6 +79,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `window.__batchd` is stamped after bootstrap completes without
   any ReferenceError.
 
+[0.3.3]: https://github.com/11sid11/Batchd/releases/tag/v0.3.3
 [0.3.2]: https://github.com/11sid11/Batchd/releases/tag/v0.3.2
 [0.3.1]: https://github.com/11sid11/Batchd/releases/tag/v0.3.1
 

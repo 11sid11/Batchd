@@ -305,8 +305,8 @@ const PANEL_CSS = `
 #batchd-panel .stat .value { font-weight: 700; font-size: 14px; }
 #batchd-panel .note { color: #8b98a5; font-size: 11px; line-height: 1.3; margin: 0 0 8px; }
 #batchd-panel .log { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11px; background: #192734; border-radius: 6px; padding: 4px 6px; max-height: 120px; overflow-y: auto; color: #8b98a5; }
-#batchd-panel .footer { font-size: 10px; color: #6e7681; text-align: center; margin: 8px 0 0; padding-top: 8px; border-top: 1px solid #253341; }
-#batchd-panel .footer a { color: #8b98a5; text-decoration: none; }
+#batchd-panel .footer { font-size: 12px; color: #8b98a5; text-align: center; margin: 10px 0 0; padding-top: 10px; border-top: 1px solid #253341; line-height: 1.6; }
+#batchd-panel .footer a { color: #e7e9ea; text-decoration: none; font-weight: 600; }
 #batchd-panel .footer a:hover { color: #1d9bf0; text-decoration: underline; }
 `.trim();
 
