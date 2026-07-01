@@ -9,7 +9,7 @@
 // ==UserScript==
 // @name         Batchd
 // @namespace    batchd
-// @version      0.3.1
+// @version      0.3.2
 // @description  Bulk-delete your X.com likes and replies.
 // @match        https://x.com/*
 // @match        https://twitter.com/*

@@ -334,6 +334,18 @@ first if you want to discuss a change larger than a small fix.
   <img src="https://img.shields.io/badge/MIT-License-blue?style=for-the-badge" alt="MIT License">
 </p>
 
+## ☕ Support
+
+If Batchd saved you time, a tip is appreciated — never required.
+
+- ☕ **[Buy Me A Chai](https://buymeachai.ezee.li/Siddharth)** — INR, UPI, cards, netbanking
+- 💎 **Solana** — `7fK5mh8RXhop4sojEQL2UqNkgRWqDEindTBj6KWRjhGM`
+  ([Solscan](https://solscan.io/account/7fK5mh8RXhop4sojEQL2UqNkgRWqDEindTBj6KWRjhGM))
+
+The support links also live inside the floating panel (footer of the
+Batchd overlay on x.com) so they're discoverable while the script is
+running.
+
 ## 📄 License
 
 [MIT](LICENSE). Use it, fork it, ship it. Attribution appreciated but

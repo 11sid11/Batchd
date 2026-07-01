@@ -248,7 +248,11 @@ function template() {
     </div>
     <div class="note">Likes and replies cleanup is best effort. X may hide or stall a few posts; refresh/rerun or remove leftovers manually.</div>
     <div class="log" data-log></div>
-    <div class="footer">Maintained by: <a href="https://x.com/sid_flac" target="_blank" rel="noopener noreferrer">@sid_flac</a></div>
+    <div class="footer">
+      Maintained by <a href="https://x.com/sid_flac" target="_blank" rel="noopener noreferrer">@sid_flac</a><br>
+      <a href="https://buymeachai.ezee.li/Siddharth" target="_blank" rel="noopener noreferrer">☕ Buy Me A Chai</a> ·
+      <a href="https://solscan.io/account/7fK5mh8RXhop4sojEQL2UqNkgRWqDEindTBj6KWRjhGM" target="_blank" rel="noopener noreferrer" title="7fK5mh8RXhop4sojEQL2UqNkgRWqDEindTBj6KWRjhGM">SOL 7fK5mh…jhGM</a>
+    </div>
   `;
 }
 

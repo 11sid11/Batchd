@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Batchd",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Bulk-delete your X.com likes and replies. No data leaves your device.",
   "permissions": ["storage"],
   "content_scripts": [
