@@ -1,6 +1,6 @@
 {
   "name": "batchd",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "private": true,
   "description": "Bulk-delete your X.com likes and replies. Ships as a Tampermonkey userscript and a Chrome Web Store extension from one source tree.",
   "type": "module",
