@@ -21,6 +21,8 @@
   <a href="https://github.com/11sid11/Batchd/releases/latest/download/batchd.user.js"><img src="https://img.shields.io/badge/Tampermonkey-Install_UserScript-000000?style=for-the-badge&logo=tampermonkey&logoColor=white" alt="Install Tampermonkey userscript"></a>
   &nbsp;
   <a href="https://github.com/11sid11/Batchd/releases"><img src="https://img.shields.io/badge/GitHub-View_Release-181717?style=for-the-badge&logo=github&logoColor=white" alt="View on GitHub"></a>
+  &nbsp;
+  <a href="https://buymeachai.ezee.li/Siddharth"><img src="https://img.shields.io/badge/Buy_Me_A_Chai-Support-F5A623?style=for-the-badge&logo=buymeacoffee&logoColor=white" alt="Buy Me A Chai"></a>
 </p>
 
 <br>
