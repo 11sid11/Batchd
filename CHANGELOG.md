@@ -29,8 +29,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     `CHROME_ORDER` in `scripts/build.js` to concatenate the shared
     modules **before** `entry.js` instead of after it. The chrome
     bundle's structural assertion (it must contain the strings
-    `loadChromeStorage` and `chromeStorage`) now catches a future
-    re-introduction at build time.
+    `loadChromeStorage` and `chromeStorage`) catches a future
+    re-introduction of the build-order half at build time; the
+    new `test/chrome-bundle.test.js` regression test catches the
+    missing-imports half by loading the BUILT bundle in a vm
+    context.
 - **Tampermonkey userscript v0.3.0 had the same scoping bug** and
   would also have been non-functional — the v0.3.0 bundle's last
   inner IIFE called `bootstrapBatchd({...})` and `gmStorage()` as
