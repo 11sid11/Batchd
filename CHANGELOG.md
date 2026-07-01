@@ -10,8 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - **Chrome extension v0.3.0 was completely non-functional in browser.**
   The v0.3.0 chrome bundle crashed at `loadChromeStorage is not defined`
-  on first load, so the panel never mounted. The Tampermonkey userscript
-  was unaffected and continued to work as before.
+  on first load, so the panel never mounted.
   - Root cause #1: `src/content.js` (the chrome entry point) called
     `loadChromeStorage()`, `chromeStorage()`, and `bootstrapBatchd()`
     as bare identifiers. The build script wraps every module in its
@@ -32,12 +31,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     bundle's structural assertion (it must contain the strings
     `loadChromeStorage` and `chromeStorage`) now catches a future
     re-introduction at build time.
+- **Tampermonkey userscript v0.3.0 had the same scoping bug** and
+  would also have been non-functional — the v0.3.0 bundle's last
+  inner IIFE called `bootstrapBatchd({...})` and `gmStorage()` as
+  bare identifiers that were unresolved at eval time, throwing
+  `ReferenceError: bootstrapBatchd is not defined`. This was masked
+  in the field because TM's auto-update prompts but does not force,
+  so most users on a previous-version install (e.g. v0.2.2) kept
+  working until they accepted the v0.3.0 update, at which point the
+  panel would stop mounting.
+  - Root cause #1: same as chrome — `src/batchd.user.js` called
+    `bootstrapBatchd` and `gmStorage` as bare identifiers. Fixed by
+    adding explicit `import` statements at the top of
+    `src/batchd.user.js`.
+  - Root cause #2: same as chrome — `TM_ORDER` in `scripts/build.js`
+    concatenated `entry.js` before the shared modules, causing
+    `entry.js`'s eager destructure of `Batchd.hasCompetingInstance`
+    to capture `undefined`. Fixed by reordering `TM_ORDER` to
+    concatenate the shared modules **before** `entry.js`.
 
 ### Notes
-- The Tampermonkey userscript (`TM_ORDER`) is **unchanged**. TM was
-  never affected by these bugs; the TM bundle's `==UserScript==`
-  metadata block is the only thing that differs from the chrome
-  build.
+- Both fixes are mirror images: the chrome and TM entry points are
+  now structurally identical (each imports the same three symbols;
+  both build orders now concatenate shared modules before entry.js).
+- A regression test (`test/tm-bundle.test.js`) is added for the TM
+  path, mirroring the existing `test/chrome-bundle.test.js`. Both
+  tests load the BUILT bundle in a vm context and assert that
+  `window.__batchd` is stamped after bootstrap completes without
+  any ReferenceError.
 
 [0.3.1]: https://github.com/11sid11/Batchd/releases/tag/v0.3.1
 
