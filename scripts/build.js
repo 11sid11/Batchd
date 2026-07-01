@@ -61,8 +61,8 @@ const TM_ORDER = [
 const CHROME_ORDER = [
   SAFE_CALL,
   'storage.chrome.js',
-  'entry.js',
   ...SHARED_MODULES,
+  'entry.js',
   CHROME_ENTRY,
 ];
 

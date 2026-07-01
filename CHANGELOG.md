@@ -5,6 +5,42 @@ All notable changes to Batchd are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - 2026-07-01
+
+### Fixed
+- **Chrome extension v0.3.0 was completely non-functional in browser.**
+  The v0.3.0 chrome bundle crashed at `loadChromeStorage is not defined`
+  on first load, so the panel never mounted. The Tampermonkey userscript
+  was unaffected and continued to work as before.
+  - Root cause #1: `src/content.js` (the chrome entry point) called
+    `loadChromeStorage()`, `chromeStorage()`, and `bootstrapBatchd()`
+    as bare identifiers. The build script wraps every module in its
+    own inner IIFE (so per-module locals don't leak across modules),
+    which means bare cross-module references are unresolved at eval
+    time. Fixed by adding explicit `import` statements for the three
+    symbols; the build script's ESM-rewriter turns them into
+    `const { ... } = Batchd;` inside the content script's wrapper,
+    where the names resolve at call time.
+  - Root cause #2: even after #1, `bootstrapBatchd` threw
+    `hasCompetingInstance is not a function` because `entry.js`'s
+    top-of-file `import { hasCompetingInstance } from './yield.js'`
+    was rewritten into an eager `const { hasCompetingInstance } = Batchd;`
+    evaluated when `entry.js`'s IIFE ran — before `yield.js` had
+    stamped `Batchd.hasCompetingInstance`. Fixed by reordering
+    `CHROME_ORDER` in `scripts/build.js` to concatenate the shared
+    modules **before** `entry.js` instead of after it. The chrome
+    bundle's structural assertion (it must contain the strings
+    `loadChromeStorage` and `chromeStorage`) now catches a future
+    re-introduction at build time.
+
+### Notes
+- The Tampermonkey userscript (`TM_ORDER`) is **unchanged**. TM was
+  never affected by these bugs; the TM bundle's `==UserScript==`
+  metadata block is the only thing that differs from the chrome
+  build.
+
+[0.3.1]: https://github.com/11sid11/Batchd/releases/tag/v0.3.1
+
 ## [0.3.0] - 2026-06-30
 
 ### Added
