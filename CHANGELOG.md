@@ -5,6 +5,15 @@ All notable changes to Batchd are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.2] - 2026-07-01
+
+### Added
+- **Support links in the floating panel footer.** The Batchd overlay on
+  x.com now shows a tip jar line with a Buy Me A Chai link and a
+  truncated Solana wallet address (clickable to Solscan).
+- **`## ☕ Support` section in README** with the same links, discoverable
+  on the repo page.
+
 ## [0.3.1] - 2026-07-01
 
 ### Fixed
@@ -63,6 +72,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `window.__batchd` is stamped after bootstrap completes without
   any ReferenceError.
 
+[0.3.2]: https://github.com/11sid11/Batchd/releases/tag/v0.3.2
 [0.3.1]: https://github.com/11sid11/Batchd/releases/tag/v0.3.1
 
 ## [0.3.0] - 2026-06-30
