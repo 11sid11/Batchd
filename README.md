@@ -92,7 +92,7 @@ machine, and there's nothing to pay for.
 
 Pick whichever install path matches your browser:
 
-**Option A — 🌐 Chrome Web Store extension (v0.3.0+, recommended on Chrome):**
+**Option A — 🌐 Chrome Web Store extension (v0.3.1+, recommended on Chrome):**
 
 1. Open the [Batchd Chrome Web Store listing](#) and click **Add to
    Chrome**. *(Link goes live once the v0.3.0 submission is approved by
@@ -154,7 +154,7 @@ account is currently signed in.
 
 | Browser | Works? |
 |---------|--------|
-| Chrome (extension — v0.3.0+) | ✅ — preferred Chrome install path |
+| Chrome (extension — v0.3.1+) | ✅ — preferred Chrome install path |
 | Chrome (Tampermonkey) | ✅ |
 | Firefox (Tampermonkey or Violentmonkey) | ✅ |
 | Edge (Tampermonkey) | ✅ |
@@ -208,9 +208,9 @@ The architecture is intentionally minimal:
 
 **Storage adapters (one per install path):**
 
-- **`src/storage.gm.js`** — wraps `GM_getValue` / `GM_setValue` /
-  `GM_deleteValue` for Tampermonkey. Returns a `get` / `set` / `del`
-  factory consumed by `src/batchd.user.js`.
+- **`src/storage.gm.js`** — wraps `GM_getValue` / `GM_setValue`
+  for Tampermonkey. Returns a `get` / `set` factory consumed by
+  `src/batchd.user.js`.
 - **`src/storage.chrome.js`** — wraps `chrome.storage.local` for the
   Chrome extension. Returns the same shape. Falls back gracefully when
   the chrome runtime reports `lastError`.
@@ -296,7 +296,7 @@ how Batchd compares:
 git clone https://github.com/11sid11/Batchd.git
 cd Batchd
 npm install
-npm test                   # runs the unit test suite (118 tests)
+npm test                   # runs the unit test suite (120 tests)
 npm run build              # builds both artifacts: userscript + extension
 npm run build:userscript   # dist/batchd.user.js only
 npm run build:extension    # dist/extension/ only (manifest + content.js + icons/)
@@ -309,8 +309,9 @@ Chrome extension it's `dist/extension/`. Both are emitted from the same
 
 Tests use `node --test` against the source modules with mocked DOM
 (`src/selectors.js` is the main DOM-touching file; the others are pure
-logic). 118 test cases cover pacing, persistence, the run loop, the
-storage adapters, the yield guard, and selector behavior.
+logic). 120 test cases cover pacing, persistence, the run loop, the
+storage adapters, the yield guard, selector behavior, and the two
+build-script bundle smoke tests (chrome extension + TM userscript).
 
 This is a personal-use tool. Contributions are welcome — open an issue
 first if you want to discuss a change larger than a small fix.

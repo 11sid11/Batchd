@@ -70,10 +70,12 @@ auto-unticks the other. The panel shows the active mode in a small
 The runtime environment for an install of Batchd. Currently one of two:
 `tampermonkey` (the userscript runs in Tampermonkey'"'"'s sandbox with the
 `GM_*` API) or `chrome-extension` (the content script runs in Chrome'"'"'s
-MV3 isolated world with the `chrome.*` API). The eight shared logic
-modules in
-`src/` are platform-agnostic; only the entry point and the storage
-adapter differ between platforms.
+MV3 isolated world with the `chrome.*` API). The shared `src/` modules
+are platform-agnostic; only the entry point and the storage adapter
+differ between platforms. As of v0.3.0 the shared set is nine files:
+seven logic (`yield.js`, `pacing.js`, `persist.js`, `failures.js`,
+`selectors.js`, `run.js`, `panel.js`), one shared bootstrap
+(`entry.js`), and one plumbing helper (`safeCall.js`).
 _Avoid_: Runtime, environment, host
 
 **Install path**:
