@@ -53,16 +53,16 @@ export function stripTmBanner(src) {
 const TM_ORDER = [
   SAFE_CALL,
   'storage.gm.js',
-  'entry.js',
   ...SHARED_MODULES,
+  'entry.js',
   TM_ENTRY,
 ];
 
 const CHROME_ORDER = [
   SAFE_CALL,
   'storage.chrome.js',
-  'entry.js',
   ...SHARED_MODULES,
+  'entry.js',
   CHROME_ENTRY,
 ];
 

@@ -26,11 +26,12 @@ add a parallel `src/storage.chrome.js`, and add a new `src/entry.js`
 plus a thin chrome entry `src/content.js`) plus one new build target,
 in exchange for one shared codebase. The chrome install keeps an
 `extension/` folder for `manifest.json` and `icons/` only -- no chrome
-source lives outside `src/`. None of the eight shared logic modules
-(`entry.js`, `yield.js`, `pacing.js`, `persist.js`, `failures.js`,
-`selectors.js`, `run.js`, `panel.js`) change semantically; only
-`batchd.user.js` loses the inline `gmStorage()` factory and gains an
-import for `storage.gm.js`.
+source lives outside `src/`. None of the nine shared `src/` files
+change semantically: seven logic modules (`yield.js`, `pacing.js`,
+`persist.js`, `failures.js`, `selectors.js`, `run.js`, `panel.js`),
+one shared bootstrap (`entry.js`), and one plumbing helper
+(`safeCall.js`). Only `batchd.user.js` loses the inline `gmStorage()`
+factory and gains an import for `storage.gm.js`.
 
 The Chrome Web Store publish step is manual for v0.3.0 (zip and drag
 `dist/extension/` into the Developer Dashboard) because the first

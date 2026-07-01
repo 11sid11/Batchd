@@ -5,6 +5,66 @@ All notable changes to Batchd are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - 2026-07-01
+
+### Fixed
+- **Chrome extension v0.3.0 was completely non-functional in browser.**
+  The v0.3.0 chrome bundle crashed at `loadChromeStorage is not defined`
+  on first load, so the panel never mounted.
+  - Root cause #1: `src/content.js` (the chrome entry point) called
+    `loadChromeStorage()`, `chromeStorage()`, and `bootstrapBatchd()`
+    as bare identifiers. The build script wraps every module in its
+    own inner IIFE (so per-module locals don't leak across modules),
+    which means bare cross-module references are unresolved at eval
+    time. Fixed by adding explicit `import` statements for the three
+    symbols; the build script's ESM-rewriter turns them into
+    `const { ... } = Batchd;` inside the content script's wrapper,
+    where the names resolve at call time.
+  - Root cause #2: even after #1, `bootstrapBatchd` threw
+    `hasCompetingInstance is not a function` because `entry.js`'s
+    top-of-file `import { hasCompetingInstance } from './yield.js'`
+    was rewritten into an eager `const { hasCompetingInstance } = Batchd;`
+    evaluated when `entry.js`'s IIFE ran — before `yield.js` had
+    stamped `Batchd.hasCompetingInstance`. Fixed by reordering
+    `CHROME_ORDER` in `scripts/build.js` to concatenate the shared
+    modules **before** `entry.js` instead of after it. The chrome
+    bundle's structural assertion (it must contain the strings
+    `loadChromeStorage` and `chromeStorage`) catches a future
+    re-introduction of the build-order half at build time; the
+    new `test/chrome-bundle.test.js` regression test catches the
+    missing-imports half by loading the BUILT bundle in a vm
+    context.
+- **Tampermonkey userscript v0.3.0 had the same scoping bug** and
+  would also have been non-functional — the v0.3.0 bundle's last
+  inner IIFE called `bootstrapBatchd({...})` and `gmStorage()` as
+  bare identifiers that were unresolved at eval time, throwing
+  `ReferenceError: bootstrapBatchd is not defined`. This was masked
+  in the field because TM's auto-update prompts but does not force,
+  so most users on a previous-version install (e.g. v0.2.2) kept
+  working until they accepted the v0.3.0 update, at which point the
+  panel would stop mounting.
+  - Root cause #1: same as chrome — `src/batchd.user.js` called
+    `bootstrapBatchd` and `gmStorage` as bare identifiers. Fixed by
+    adding explicit `import` statements at the top of
+    `src/batchd.user.js`.
+  - Root cause #2: same as chrome — `TM_ORDER` in `scripts/build.js`
+    concatenated `entry.js` before the shared modules, causing
+    `entry.js`'s eager destructure of `Batchd.hasCompetingInstance`
+    to capture `undefined`. Fixed by reordering `TM_ORDER` to
+    concatenate the shared modules **before** `entry.js`.
+
+### Notes
+- Both fixes are mirror images: the chrome and TM entry points are
+  now structurally identical (each imports the same three symbols;
+  both build orders now concatenate shared modules before entry.js).
+- A regression test (`test/tm-bundle.test.js`) is added for the TM
+  path, mirroring the existing `test/chrome-bundle.test.js`. Both
+  tests load the BUILT bundle in a vm context and assert that
+  `window.__batchd` is stamped after bootstrap completes without
+  any ReferenceError.
+
+[0.3.1]: https://github.com/11sid11/Batchd/releases/tag/v0.3.1
+
 ## [0.3.0] - 2026-06-30
 
 ### Added

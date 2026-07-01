@@ -36,8 +36,8 @@ intentionally **not** reintroducing reposts or quote reposts in
 this branch — see "What this ADR does not cover" below.
 
 Replies are different from reposts in one decisive way: each reply
-is a post the user authored, so X'"'"'s "Delete" flow is the same
-modal every other post on the user'"'"'s profile uses. There is one
+is a post the user authored, so X's "Delete" flow is the same
+modal every other post on the user's profile uses. There is one
 DOM target, one menu, one confirm button. That is what makes a
 replies loop tractable as a category peer of likes.
 
@@ -45,8 +45,8 @@ replies loop tractable as a category peer of likes.
 
 ### Source view
 
-`https://x.com/<username>/with_replies` — X'"'"'s "Replies" tab on the
-user'"'"'s profile. The script'"'"'s `tabUrl('"'"'me'"'"', '"'"'replies'"'"')` resolves to
+`https://x.com/<username>/with_replies` — X's "Replies" tab on the
+user's profile. The script's `tabUrl('me', 'replies')` resolves to
 this URL. If X changes this URL pattern, the patch point is one
 line in `selectors.js` (`TAB_PATHS.replies`); no other module
 needs to change.
@@ -55,13 +55,13 @@ needs to change.
 
 The selectors below are the three-signal fallback chain in
 `findMoreButtonInNode()` (`src/selectors.js`). The walk-up scope
-to the post ID'"'"'s status link happens in the caller,
+to the post ID's status link happens in the caller,
 `findReplies()`, and is documented in CONTEXT.md under "More-button
 scoping".
 
 1. Click the more-menu trigger on the post — three fallback
    selectors in priority order:
-   - `[data-testid="caret"]` (X'"'"'s current canonical testid)
+   - `[data-testid="caret"]` (X's current canonical testid)
    - `[aria-label="More"]` (stable across X releases that localize)
    - `[data-testid="more"]` (X has used this testid historically)
 2. Wait up to 5s (`MENU_APPEAR_TIMEOUT_MS`) for a menu item with
@@ -75,7 +75,7 @@ scoping".
    - `[role="dialog"]` containing a button whose accessible name
      is "Delete" (case-insensitive); falls back to the first button
      in a 2-button dialog if no label match
-5. Click the modal'"'"'s Delete confirm button.
+5. Click the modal's Delete confirm button.
 6. Wait for the post to disappear from the timeline (or for the
    timeline to shift the target post out of view), bounded by
    `CLICK_FLIP_TIMEOUT_MS` (5s, shared with likes).
@@ -90,10 +90,10 @@ category.
 
 Slower because:
 - delete is destructive and not idempotent (unlike is);
-- X'"'"'s anti-abuse signals treat delete harsher than unlike (higher
+- X's anti-abuse signals treat delete harsher than unlike (higher
   rate-limit risk, higher captcha risk);
 - public, social cost — a misclick leaves a visible gap in someone
-  else'"'"'s notifications.
+  else's notifications.
 
 ### Confirmation
 
@@ -104,7 +104,7 @@ on purpose. The destructive, public nature of reply deletion is
 already mitigated by several other constraints:
 
 - `deleteReplies` defaults to `false` (the user must opt in)
-- the panel'"'"'s mutual-exclusivity rule (Likes and Replies cannot be
+- the panel's mutual-exclusivity rule (Likes and Replies cannot be
   active at the same time, so the user explicitly chose replies)
 - the slower replies pacing preset (3000ms base vs 1200ms for likes)
 - the require-typed-confirmation gate before Go is enabled
@@ -141,7 +141,7 @@ content the user authored. The user must opt in.
 - `processed[]` is shared across categories. A post ID is a post
   ID — no overlap is possible between the likes tab and the
   replies tab in normal use. Sharing the set keeps `processedHas`
-  O(1) and means a future category extension doesn'"'"'t need to
+  O(1) and means a future category extension doesn't need to
   reason about per-category processed sets.
 - Per-category stats: `stats.likes.{success, failure, skipped,
   consecutiveFailures}` and `stats.replies.{...}`. The panel
@@ -155,13 +155,13 @@ content the user authored. The user must opt in.
   this branch. The prior removal (commit `0c1d148`) was
   deliberate; restoring those flows needs a new design pass and
   live verification, not a config flag.
-- **Deleting non-reply posts (the user'"'"'s regular "Tweets" tab).**
+- **Deleting non-reply posts (the user's regular "Tweets" tab).**
   Out of scope. The Replies tab already covers the most
   high-value deletion case; a broader "delete my own tweets"
   loop is a different problem (different pacing, different
   confirmation, possibly different ADR).
 - **Bulk-deleting media only.** Delete deletes the post; there is
-  no separate "remove media" affordance in X'"'"'s UI that we can
+  no separate "remove media" affordance in X's UI that we can
   drive.
 - **Cross-tab parallelization.** One category runs at a time. The
   pacing numbers are tuned for a single live tab; running
